@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Apply Genie Website
+A modern Next.js web application for students to discover scholarships they actually qualify for through an intelligent matching questionnaire.
 
-## Getting Started
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./public/hero-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="./public/hero-light.png">
+  <img alt="Apply Genie Hero Screenshot" src="./public/hero-dark.png">
+</picture>
 
-First, run the development server:
-
+## Quick Start
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Features
+- **Dynamic Scholarship Matching**: Walk through a responsive, step-by-step questionnaire that dynamically updates based on your previous answers.
+- **Robust Authentication**: Powered by Clerk to provide secure, seamless sign-in and sign-up flows for students.
+- **Light & Dark Mode**: A beautifully crafted UI using CSS modules and semantic variables that fully supports system and manual theme toggling.
+- **In-Memory Matching Engine**: Filters and evaluates scholarship eligibility on the fly using a fast, local Next.js API route without requiring heavy database queries.
+- **Dashboard & Saved Scholarships**: Log in to view your eligibility profile completion, stats, and manage bookmarked scholarships.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## How to run locally
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Prerequisites
+- **Node.js**: v18+ recommended.
+- **Clerk Account**: You need a Clerk Application for user authentication.
 
-## Learn More
+### Setup Steps
+1. **Clone and Install**
+   ```bash
+   git clone https://github.com/your-username/apply-genie-website.git
+   cd apply-genie-website
+   npm install
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+2. **Environment Variables**
+   Create a `.env` file in the root directory and add your Clerk credentials:
+   ```env
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+   CLERK_SECRET_KEY=sk_test_...
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. **Start the Development Server**
+   ```bash
+   npm run dev
+   ```
+   The application will be available at [http://localhost:3000](http://localhost:3000).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## How it works
+This repository represents the frontend and user-facing experience of the Apply Genie ecosystem. It is built using **Next.js (App Router)** and relies on standard CSS modules for styling, intentionally avoiding utility-class frameworks to maintain complete control over dynamic theme semantics (e.g. glassmorphism).
 
-## Deploy on Vercel
+The scholarship matching logic lives within a server-side Next.js API route (`/api/scholarships`). Instead of building complex SQL graph queries to determine eligibility, the API route reads from a static JSON database and evaluates user profiles in-memory. This allows for incredibly fast filtering across 200+ scholarships without architectural overhead.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Auth is handled via Clerk, which provides robust JWT-based session management while enabling the frontend to effortlessly conditionally render the Dashboard and Save buttons based on the user's active session.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Credits
+- Built with [Next.js](https://nextjs.org/) and [React](https://react.dev/).
+- Authentication by [Clerk](https://clerk.com/).
+- Icons provided by [Lucide](https://lucide.dev/).
+- The backend data scraper repository can be found at `apply-genie`.
