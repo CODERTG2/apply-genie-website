@@ -1,0 +1,562 @@
+"use client";
+
+import { useState, useEffect, useMemo, useCallback } from "react";
+import Link from "next/link";
+import Header from "@/components/Header";
+import styles from "./page.module.css";
+import attributeSchema from "../../../attribute_schema.json";
+import entityDb from "../../../entity_db.json";
+
+// ─── Types ───────────────────────────────────────────────
+type QuestionType = "numeric" | "single_select" | "multi_select" | "boolean" | "text" | "entity_lookup" | "entity_lookup_multi" | "numeric_entity_map";
+
+type QuestionDef = {
+  question: string;
+  type: QuestionType;
+  pre_seeded?: string[];
+  allow_new?: boolean;
+  optional?: boolean;
+  optional_na?: boolean;
+  na_label?: string;
+  depends_on?: Record<string, string[] | string>;
+  db_key?: string;
+  order: number;
+  comparison?: string;
+  scale?: number;
+  note?: string;
+};
+
+type SchemaMap = Record<string, QuestionDef>;
+
+// Map schema keys to profile keys (camelCase)
+const keyToProfileKey: Record<string, string> = {
+  age: "age",
+  gender: "gender",
+  race: "race",
+  ethnicity: "ethnicity",
+  lgbtq: "lgbtq",
+  country_of_residence: "countryOfResidence",
+  us_state: "usState",
+  us_county_city: "usCountyCity",
+  canadian_province: "canadianProvince",
+  citizenship_status: "citizenshipStatus",
+  visa_type: "visaType",
+  education_type: "educationType",
+  degree_pursuing: "degreePursuing",
+  year_of_study: "yearOfStudy",
+  enrollment_status: "enrollmentStatus",
+  institution_name: "institutionName",
+  institution_type: "institutionType",
+  gpa: "gpa",
+  credit_hours_completed: "creditHoursCompleted",
+  field_of_study: "fieldOfStudy",
+  minor: "minor",
+  sat_score: "satScore",
+  act_score: "actScore",
+  other_test_scores: "otherTestScores",
+  financial_need: "financialNeed",
+  military: "military",
+  first_generation: "firstGeneration",
+  foster_care: "fosterCare",
+  disability: "disability",
+  medical_condition_detail: "medicalConditionDetail",
+  community_service: "communityService",
+  memberships: "memberships",
+  career_goals: "careerGoals",
+};
+
+const entityDatabase = entityDb as Record<string, string[]>;
+
+export default function QuestionnairePage() {
+  const [answers, setAnswers] = useState<Record<string, unknown>>({});
+  const [currentStep, setCurrentStep] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const schema = attributeSchema as SchemaMap;
+
+  // Build ordered list of visible questions based on dependencies
+  const visibleQuestions = useMemo(() => {
+    const allQuestions = Object.entries(schema)
+      .sort(([, a], [, b]) => a.order - b.order);
+
+    return allQuestions.filter(([, def]) => {
+      if (!def.depends_on) return true;
+
+      for (const [depKey, depValues] of Object.entries(def.depends_on)) {
+        const profileKey = keyToProfileKey[depKey];
+        const userAnswer = answers[profileKey];
+
+        if (depValues === "*") {
+          // Any non-null answer satisfies
+          if (userAnswer === null || userAnswer === undefined || userAnswer === "") return false;
+        } else if (Array.isArray(depValues)) {
+          // User's answer must match one of the required values
+          if (Array.isArray(userAnswer)) {
+            if (!depValues.some((dv) => userAnswer.includes(dv))) return false;
+          } else {
+            if (!depValues.includes(userAnswer as string)) return false;
+          }
+        }
+      }
+      return true;
+    });
+  }, [schema, answers]);
+
+  const currentQuestion = visibleQuestions[currentStep];
+  const totalSteps = visibleQuestions.length;
+  const progress = totalSteps > 0 ? ((currentStep) / totalSteps) * 100 : 0;
+
+  // Load existing profile on mount
+  useEffect(() => {
+    fetch("/api/profile")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.profile) {
+          setAnswers(data.profile);
+          if (data.completed) setCompleted(true);
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  // Get the profile key for current question
+  const getProfileKey = useCallback(
+    (schemaKey: string) => keyToProfileKey[schemaKey] || schemaKey,
+    []
+  );
+
+  // Save answers to the server
+  const saveAnswers = useCallback(
+    async (updatedAnswers: Record<string, unknown>, markComplete = false) => {
+      setSaving(true);
+      try {
+        const payload = markComplete
+          ? { ...updatedAnswers, questionnaireCompleted: true }
+          : updatedAnswers;
+        await fetch("/api/profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } finally {
+        setSaving(false);
+      }
+    },
+    []
+  );
+
+  const handleAnswer = (schemaKey: string, value: unknown) => {
+    const profileKey = getProfileKey(schemaKey);
+    setAnswers((prev) => ({ ...prev, [profileKey]: value }));
+  };
+
+  const handleNext = async () => {
+    if (currentStep >= totalSteps - 1) {
+      // Last question — complete the questionnaire
+      await saveAnswers(answers, true);
+      setCompleted(true);
+      return;
+    }
+    // Save current progress
+    await saveAnswers(answers);
+    setCurrentStep((prev) => prev + 1);
+    setSearchQuery("");
+  };
+
+  const handleBack = () => {
+    if (currentStep > 0) {
+      setCurrentStep((prev) => prev - 1);
+      setSearchQuery("");
+    }
+  };
+
+  const handleSkip = () => {
+    if (currentStep < totalSteps - 1) {
+      setCurrentStep((prev) => prev + 1);
+      setSearchQuery("");
+    } else {
+      saveAnswers(answers, true);
+      setCompleted(true);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className={styles.questionnairePage}>
+        <Header />
+        <div className={styles.loading}>Loading your profile...</div>
+      </div>
+    );
+  }
+
+  if (completed) {
+    return (
+      <div className={styles.questionnairePage}>
+        <Header />
+        <div className={styles.questionnaireInner}>
+          <div className={`card ${styles.completeCard}`}>
+            <div className={styles.completeIcon}>✦</div>
+            <h2 className={styles.completeTitle}>Profile complete!</h2>
+            <p className={styles.completeSubtitle}>
+              Your answers have been saved. Head to your scholarships to see matches.
+            </p>
+            <div style={{ display: "flex", gap: "var(--space-4)", justifyContent: "center" }}>
+              <Link href="/scholarships" className="btn btn--primary btn--large">
+                View My Scholarships
+              </Link>
+              <Link href="/dashboard" className="btn btn--ghost btn--large">
+                Go to Dashboard
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentQuestion) {
+    return (
+      <div className={styles.questionnairePage}>
+        <Header />
+        <div className={styles.loading}>No questions available.</div>
+      </div>
+    );
+  }
+
+  const [schemaKey, questionDef] = currentQuestion;
+  const profileKey = getProfileKey(schemaKey);
+  const currentValue = answers[profileKey];
+
+  return (
+    <div className={styles.questionnairePage}>
+      <Header />
+      <div className={styles.questionnaireInner}>
+        {/* Progress bar */}
+        <div className={styles.progressSection}>
+          <div className={styles.progressHeader}>
+            <span className={styles.progressLabel}>Your Profile</span>
+            <span className={styles.progressCount}>
+              {currentStep + 1} of {totalSteps}
+            </span>
+          </div>
+          <div className={styles.progressTrack}>
+            <div className={styles.progressFill} style={{ width: `${progress}%` }} />
+          </div>
+        </div>
+
+        {/* Question Card */}
+        <div className={styles.questionCard} key={schemaKey}>
+          <p className={styles.questionNumber}>
+            Question {currentStep + 1}
+          </p>
+          <h2 className={styles.questionText}>{questionDef.question}</h2>
+
+          {/* Render input based on type */}
+          <QuestionInput
+            schemaKey={schemaKey}
+            def={questionDef}
+            value={currentValue}
+            onChange={(val) => handleAnswer(schemaKey, val)}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+          />
+        </div>
+
+        {/* Navigation */}
+        <div className={styles.navButtons}>
+          <button
+            className={styles.skipButton}
+            onClick={handleBack}
+            disabled={currentStep === 0}
+            style={{ visibility: currentStep === 0 ? "hidden" : "visible" }}
+          >
+            ← Back
+          </button>
+
+          <div className={styles.navRight}>
+            {(questionDef.optional || questionDef.optional_na) && (
+              <button
+                className={styles.skipButton}
+                onClick={handleSkip}
+              >
+                Skip
+              </button>
+            )}
+            <button
+              className="btn btn--primary"
+              onClick={handleNext}
+              disabled={saving}
+              id="questionnaire-next-btn"
+            >
+              {saving
+                ? "Saving..."
+                : currentStep >= totalSteps - 1
+                  ? "Complete Profile"
+                  : "Next →"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Question Input Component ────────────────────────────
+function QuestionInput({
+  schemaKey,
+  def,
+  value,
+  onChange,
+  searchQuery,
+  setSearchQuery,
+}: {
+  schemaKey: string;
+  def: QuestionDef;
+  value: unknown;
+  onChange: (val: unknown) => void;
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
+}) {
+  switch (def.type) {
+    case "numeric":
+      return (
+        <div>
+          <input
+            type="number"
+            className={`input ${styles.numericInput}`}
+            value={value !== null && value !== undefined ? String(value) : ""}
+            onChange={(e) => {
+              const num = e.target.value === "" ? null : Number(e.target.value);
+              onChange(num);
+            }}
+            step={def.scale ? 0.01 : 1}
+            min={0}
+            max={def.scale || undefined}
+            placeholder={def.scale ? `0.00 - ${def.scale}` : "Enter a number"}
+            id={`input-${schemaKey}`}
+          />
+          {def.optional_na && def.na_label && (
+            <button
+              className={`${styles.optionButton} ${value === "N/A" ? styles.optionButtonSelected : ""}`}
+              onClick={() => onChange(value === "N/A" ? null : "N/A")}
+              style={{ marginTop: "var(--space-3)", maxWidth: 300 }}
+            >
+              <span
+                className={`${styles.optionIndicator} ${value === "N/A" ? styles.optionIndicatorSelected : ""}`}
+              >
+                {value === "N/A" && <span className={styles.optionIndicatorDot} />}
+              </span>
+              {def.na_label}
+            </button>
+          )}
+        </div>
+      );
+
+    case "boolean":
+      return (
+        <div className={styles.optionGrid}>
+          {[
+            { label: "Yes", val: true },
+            { label: "No", val: false },
+          ].map((opt) => (
+            <button
+              key={String(opt.val)}
+              className={`${styles.optionButton} ${value === opt.val ? styles.optionButtonSelected : ""}`}
+              onClick={() => onChange(opt.val)}
+            >
+              <span
+                className={`${styles.optionIndicator} ${value === opt.val ? styles.optionIndicatorSelected : ""}`}
+              >
+                {value === opt.val && <span className={styles.optionIndicatorDot} />}
+              </span>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      );
+
+    case "single_select":
+      return (
+        <div className={styles.optionGrid}>
+          {(def.pre_seeded || []).map((option) => (
+            <button
+              key={option}
+              className={`${styles.optionButton} ${value === option ? styles.optionButtonSelected : ""}`}
+              onClick={() => onChange(option)}
+            >
+              <span
+                className={`${styles.optionIndicator} ${value === option ? styles.optionIndicatorSelected : ""}`}
+              >
+                {value === option && <span className={styles.optionIndicatorDot} />}
+              </span>
+              {option}
+            </button>
+          ))}
+        </div>
+      );
+
+    case "multi_select": {
+      const selected = Array.isArray(value) ? (value as string[]) : [];
+      return (
+        <div className={styles.optionGrid}>
+          {(def.pre_seeded || []).map((option) => {
+            const isSelected = selected.includes(option);
+            return (
+              <button
+                key={option}
+                className={`${styles.optionButton} ${isSelected ? styles.optionButtonSelected : ""}`}
+                onClick={() => {
+                  const newVal = isSelected
+                    ? selected.filter((s) => s !== option)
+                    : [...selected, option];
+                  onChange(newVal);
+                }}
+              >
+                <span
+                  className={`${styles.optionIndicator} ${styles.optionIndicatorSquare} ${isSelected ? styles.optionIndicatorSelected : ""}`}
+                >
+                  {isSelected && <span className={styles.checkMark}>✓</span>}
+                </span>
+                {option}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    case "text":
+      return (
+        <input
+          type="text"
+          className={`input ${styles.textInput}`}
+          value={typeof value === "string" ? value : ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Type your answer..."
+          id={`input-${schemaKey}`}
+        />
+      );
+
+    case "entity_lookup": {
+      const dbKey = def.db_key || "";
+      const options = entityDatabase[dbKey] || [];
+      const filtered = searchQuery
+        ? options.filter((o) => o.toLowerCase().includes(searchQuery.toLowerCase()))
+        : options.slice(0, 20);
+
+      return (
+        <div className={styles.searchableWrapper}>
+          <input
+            type="text"
+            className={styles.searchInput}
+            value={searchQuery || (typeof value === "string" ? value : "")}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              if (!e.target.value) onChange(null);
+            }}
+            placeholder="Search..."
+            id={`search-${schemaKey}`}
+          />
+          {searchQuery && filtered.length > 0 && (
+            <div className={styles.searchDropdown}>
+              {filtered.slice(0, 15).map((opt) => (
+                <div
+                  key={opt}
+                  className={`${styles.searchOption} ${value === opt ? styles.searchOptionSelected : ""}`}
+                  onClick={() => {
+                    onChange(opt);
+                    setSearchQuery("");
+                  }}
+                >
+                  {opt}
+                </div>
+              ))}
+            </div>
+          )}
+          {typeof value === "string" && value && !searchQuery && (
+            <div className={styles.selectedTags}>
+              <span className={styles.tag}>
+                {value}
+                <button className={styles.tagRemove} onClick={() => onChange(null)}>
+                  ×
+                </button>
+              </span>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    case "entity_lookup_multi": {
+      const dbKey = def.db_key || "";
+      const options = entityDatabase[dbKey] || [];
+      const selected = Array.isArray(value) ? (value as string[]) : [];
+      const filtered = searchQuery
+        ? options.filter(
+            (o) =>
+              o.toLowerCase().includes(searchQuery.toLowerCase()) &&
+              !selected.includes(o)
+          )
+        : [];
+
+      return (
+        <div className={styles.searchableWrapper}>
+          <input
+            type="text"
+            className={styles.searchInput}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search and select..."
+            id={`search-${schemaKey}`}
+          />
+          {searchQuery && filtered.length > 0 && (
+            <div className={styles.searchDropdown}>
+              {filtered.slice(0, 15).map((opt) => (
+                <div
+                  key={opt}
+                  className={styles.searchOption}
+                  onClick={() => {
+                    onChange([...selected, opt]);
+                    setSearchQuery("");
+                  }}
+                >
+                  {opt}
+                </div>
+              ))}
+            </div>
+          )}
+          {selected.length > 0 && (
+            <div className={styles.selectedTags}>
+              {selected.map((s) => (
+                <span key={s} className={styles.tag}>
+                  {s}
+                  <button
+                    className={styles.tagRemove}
+                    onClick={() => onChange(selected.filter((v) => v !== s))}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    default:
+      return (
+        <input
+          type="text"
+          className={`input ${styles.textInput}`}
+          value={typeof value === "string" ? value : ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Type your answer..."
+        />
+      );
+  }
+}
