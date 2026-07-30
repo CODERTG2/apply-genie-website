@@ -5,13 +5,13 @@ import "./globals.css";
 
 import { ThemeProvider } from "@/components/ThemeProvider";
 
-const dmSans = DM_Sans({
+const bodyFont = DM_Sans({
   variable: "--font-body",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
 
-const dmSerif = DM_Serif_Display({
+const displayFont = DM_Serif_Display({
   variable: "--font-display",
   subsets: ["latin"],
   weight: "400",
@@ -30,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en" className={`${dmSans.variable} ${dmSerif.variable}`} suppressHydrationWarning>
+      <html lang="en" className={`${bodyFont.variable} ${displayFont.variable}`} suppressHydrationWarning>
         <body>
           <ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem>
             {children}

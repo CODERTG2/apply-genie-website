@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import styles from "./page.module.css";
 import attributeSchema from "../../../attribute_schema.json";
 import entityDb from "../../../entity_db.json";
+import { Check, X, Edit2 } from "lucide-react";
+import { motion } from "framer-motion";
 
-// ─── Types ───────────────────────────────────────────────
+// Types
 type QuestionType = "numeric" | "single_select" | "multi_select" | "boolean" | "text" | "entity_lookup" | "entity_lookup_multi" | "numeric_entity_map";
 
 type QuestionDef = {
@@ -29,7 +30,6 @@ type QuestionDef = {
 
 type SchemaMap = Record<string, QuestionDef>;
 
-// Map schema keys to profile keys (camelCase)
 const keyToProfileKey: Record<string, string> = {
   age: "age",
   gender: "gender",
@@ -67,274 +67,376 @@ const keyToProfileKey: Record<string, string> = {
 };
 
 const entityDatabase = entityDb as Record<string, string[]>;
+const schema = attributeSchema as SchemaMap;
 
-export default function QuestionnairePage() {
+const SECTIONS = [
+  {
+    id: "demographics",
+    title: "Demographics",
+    keys: ["age", "gender", "race", "ethnicity", "lgbtq"]
+  },
+  {
+    id: "location",
+    title: "Location",
+    keys: ["country_of_residence", "us_state", "us_county_city", "canadian_province"]
+  },
+  {
+    id: "citizenship",
+    title: "Citizenship",
+    keys: ["citizenship_status", "visa_type"]
+  },
+  {
+    id: "education",
+    title: "Education",
+    keys: ["education_type", "degree_pursuing", "year_of_study", "enrollment_status", "institution_name", "institution_type", "gpa", "credit_hours_completed"]
+  },
+  {
+    id: "academics",
+    title: "Academics",
+    keys: ["field_of_study", "minor", "sat_score", "act_score", "other_test_scores"]
+  },
+  {
+    id: "financial",
+    title: "Financial & Background",
+    keys: ["financial_need", "military", "first_generation", "foster_care", "disability", "medical_condition_detail"]
+  },
+  {
+    id: "activities",
+    title: "Activities & Goals",
+    keys: ["community_service", "memberships", "career_goals"]
+  }
+];
+
+export default function ProfilePage() {
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
-  const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [editAnswers, setEditAnswers] = useState<Record<string, unknown>>({});
   const [saving, setSaving] = useState(false);
-  const [completed, setCompleted] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const router = useRouter();
+  
+  const [requirements, setRequirements] = useState<Array<any>>([]);
+  const [reqsLoading, setReqsLoading] = useState(true);
 
-  const schema = attributeSchema as SchemaMap;
-
-  // Build ordered list of visible questions based on dependencies
-  const visibleQuestions = useMemo(() => {
-    const allQuestions = Object.entries(schema)
-      .sort(([, a], [, b]) => a.order - b.order);
-
-    return allQuestions.filter(([, def]) => {
-      if (!def.depends_on) return true;
-
-      for (const [depKey, depValues] of Object.entries(def.depends_on)) {
-        const profileKey = keyToProfileKey[depKey];
-        const userAnswer = answers[profileKey];
-
-        if (depValues === "*") {
-          // Any non-null answer satisfies
-          if (userAnswer === null || userAnswer === undefined || userAnswer === "") return false;
-        } else if (Array.isArray(depValues)) {
-          // User's answer must match one of the required values
-          if (Array.isArray(userAnswer)) {
-            if (!depValues.some((dv) => userAnswer.includes(dv))) return false;
-          } else {
-            if (!depValues.includes(userAnswer as string)) return false;
-          }
-        }
-      }
-      return true;
-    });
-  }, [schema, answers]);
-
-  const currentQuestion = visibleQuestions[currentStep];
-  const totalSteps = visibleQuestions.length;
-  const progress = totalSteps > 0 ? ((currentStep) / totalSteps) * 100 : 0;
-
-  // Load existing profile on mount
   useEffect(() => {
     fetch("/api/profile")
       .then((res) => res.json())
       .then((data) => {
         if (data.profile) {
           setAnswers(data.profile);
-          if (data.completed) {
-            setCompleted(true);
-            router.push("/profile");
-          }
         }
         setLoading(false);
       })
       .catch(() => setLoading(false));
+      
+    fetchRequirements();
   }, []);
 
-  // Get the profile key for current question
-  const getProfileKey = useCallback(
-    (schemaKey: string) => keyToProfileKey[schemaKey] || schemaKey,
-    []
-  );
-
-  // Save answers to the server
-  const saveAnswers = useCallback(
-    async (updatedAnswers: Record<string, unknown>, markComplete = false) => {
-      setSaving(true);
-      try {
-        const payload = markComplete
-          ? { ...updatedAnswers, questionnaireCompleted: true }
-          : updatedAnswers;
-        await fetch("/api/profile", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      } finally {
-        setSaving(false);
+  const fetchRequirements = async () => {
+    try {
+      const res = await fetch("/api/requirements/responses");
+      const data = await res.json();
+      if (data.responses) {
+        setRequirements(data.responses);
       }
-    },
-    []
-  );
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setReqsLoading(false);
+    }
+  };
+
+  const getProfileKey = (schemaKey: string) => keyToProfileKey[schemaKey] || schemaKey;
+
+  const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    e.preventDefault();
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleEdit = (sectionId: string) => {
+    setEditAnswers({ ...answers });
+    setEditingSection(sectionId);
+  };
+
+  const handleCancel = () => {
+    setEditingSection(null);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editAnswers),
+      });
+      setAnswers(editAnswers);
+      setEditingSection(null);
+    } catch (e) {
+      console.error("Failed to save profile", e);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleAnswer = (schemaKey: string, value: unknown) => {
     const profileKey = getProfileKey(schemaKey);
-    setAnswers((prev) => ({ ...prev, [profileKey]: value }));
+    setEditAnswers((prev) => ({ ...prev, [profileKey]: value }));
   };
 
-  const handleNext = async () => {
-    if (currentStep >= totalSteps - 1) {
-      // Last question — complete the questionnaire
-      await saveAnswers(answers, true);
-      setCompleted(true);
-      router.push("/profile");
-      return;
+  const toggleRequirement = async (req: any) => {
+    const newIsMet = !req.isMet;
+    // Optimistic update
+    setRequirements((prev) => 
+      prev.map(r => r.id === req.id ? { ...r, isMet: newIsMet } : r)
+    );
+    try {
+      await fetch("/api/requirements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requirement: req.requirement, isMet: newIsMet }),
+      });
+    } catch (error) {
+      console.error("Failed to toggle requirement", error);
+      // Revert on error
+      setRequirements((prev) => 
+        prev.map(r => r.id === req.id ? { ...r, isMet: req.isMet } : r)
+      );
     }
-    // Save current progress
-    await saveAnswers(answers);
-    setCurrentStep((prev) => prev + 1);
-    setSearchQuery("");
   };
 
-  const handleBack = () => {
-    if (currentStep > 0) {
-      setCurrentStep((prev) => prev - 1);
-      setSearchQuery("");
+  const isFieldVisible = (def: QuestionDef, currentAnswers: Record<string, unknown>) => {
+    if (!def.depends_on) return true;
+    for (const [depKey, depValues] of Object.entries(def.depends_on)) {
+      const profileKey = getProfileKey(depKey);
+      const userAnswer = currentAnswers[profileKey];
+      if (depValues === "*") {
+        if (userAnswer === null || userAnswer === undefined || userAnswer === "") return false;
+      } else if (Array.isArray(depValues)) {
+        if (Array.isArray(userAnswer)) {
+          if (!depValues.some((dv) => userAnswer.includes(dv))) return false;
+        } else {
+          if (!depValues.includes(userAnswer as string)) return false;
+        }
+      }
     }
-  };
-
-  const handleSkip = async () => {
-    if (currentStep < totalSteps - 1) {
-      setCurrentStep((prev) => prev + 1);
-      setSearchQuery("");
-    } else {
-      await saveAnswers(answers, true);
-      setCompleted(true);
-      router.push("/profile");
-    }
+    return true;
   };
 
   if (loading) {
     return (
-      <div className={styles.questionnairePage}>
+      <div className={styles.profilePage}>
         <Header />
         <div className={styles.loading}>Loading your profile...</div>
       </div>
     );
   }
 
-  if (completed) {
-    return (
-      <div className={styles.questionnairePage}>
-        <Header />
-        <div className={styles.questionnaireInner}>
-          <div className={`card ${styles.completeCard}`}>
-            <div className={styles.completeIcon}>✦</div>
-            <h2 className={styles.completeTitle}>Profile complete!</h2>
-            <p className={styles.completeSubtitle}>
-              Your answers have been saved. Head to your scholarships to see matches.
-            </p>
-            <div style={{ display: "flex", gap: "var(--space-4)", justifyContent: "center" }}>
-              <Link href="/scholarships" className="btn btn--primary btn--large">
-                View My Scholarships
-              </Link>
-              <Link href="/dashboard" className="btn btn--ghost btn--large">
-                Go to Dashboard
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!currentQuestion) {
-    return (
-      <div className={styles.questionnairePage}>
-        <Header />
-        <div className={styles.loading}>No questions available.</div>
-      </div>
-    );
-  }
-
-  const [schemaKey, questionDef] = currentQuestion;
-  const profileKey = getProfileKey(schemaKey);
-  const currentValue = answers[profileKey];
-
   return (
-    <div className={styles.questionnairePage}>
+    <div className={styles.profilePage}>
       <Header />
-      <div className={styles.questionnaireInner}>
-        {/* Progress bar */}
-        <div className={styles.progressSection}>
-          <div className={styles.progressHeader}>
-            <span className={styles.progressLabel}>Your Profile</span>
-            <span className={styles.progressCount}>
-              {currentStep + 1} of {totalSteps}
-            </span>
-          </div>
-          <div className={styles.progressTrack}>
-            <div className={styles.progressFill} style={{ width: `${progress}%` }} />
-          </div>
-        </div>
+      <div className={styles.inner}>
+        <motion.div 
+          className={styles.pageHeader}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h1 className={styles.pageTitle}>Your Profile</h1>
+          <p className={styles.pageSubtitle}>Review and edit your dossier for precise scholarship matching.</p>
+        </motion.div>
 
-        {/* Question Card */}
-        <div className={styles.questionCard} key={schemaKey}>
-          <p className={styles.questionNumber}>
-            Question {currentStep + 1}
-          </p>
-          <h2 className={styles.questionText}>{questionDef.question}</h2>
-
-          {/* Render input based on type */}
-          <QuestionInput
-            schemaKey={schemaKey}
-            def={questionDef}
-            value={currentValue}
-            onChange={(val) => handleAnswer(schemaKey, val)}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-          />
-        </div>
-
-        {/* Navigation */}
-        <div className={styles.navButtons}>
-          <button
-            className={styles.skipButton}
-            onClick={handleBack}
-            disabled={currentStep === 0}
-            style={{ visibility: currentStep === 0 ? "hidden" : "visible" }}
+        <div className={styles.layout}>
+          {/* Sticky Sidebar */}
+          <motion.nav 
+            className={styles.sidebar}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
           >
-            ← Back
-          </button>
-
-          <div className={styles.navRight}>
-            {(questionDef.optional || questionDef.optional_na) && (
-              <button
-                className={styles.skipButton}
-                onClick={handleSkip}
+            {SECTIONS.map((section) => (
+              <a 
+                key={`nav-${section.id}`} 
+                href={`#${section.id}`}
+                className={styles.sidebarLink}
+                onClick={(e) => scrollToSection(e, section.id)}
               >
-                Skip
-              </button>
-            )}
-            <button
-              className="btn btn--primary"
-              onClick={handleNext}
-              disabled={saving}
-              id="questionnaire-next-btn"
+                {section.title}
+              </a>
+            ))}
+            <a 
+              href="#requirements"
+              className={styles.sidebarLink}
+              onClick={(e) => scrollToSection(e, "requirements")}
+              style={{ marginTop: "var(--space-4)", paddingTop: "var(--space-4)", borderTop: "1px solid var(--border-subtle)" }}
             >
-              {saving
-                ? "Saving..."
-                : currentStep >= totalSteps - 1
-                  ? "Complete Profile"
-                  : "Next →"}
-            </button>
+              Specific Requirements
+            </a>
+          </motion.nav>
+
+          {/* Main Content */}
+          <div className={styles.mainContent}>
+            {SECTIONS.map((section, index) => {
+              const isEditing = editingSection === section.id;
+              const currentData = isEditing ? editAnswers : answers;
+
+              return (
+                <motion.div 
+                  id={section.id}
+                  key={section.id} 
+                  className={styles.section}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 * index }}
+                >
+              <div className={styles.sectionHeader}>
+                <h2 className={styles.sectionTitle}>{section.title}</h2>
+                {!isEditing && (
+                  <button className="btn btn--ghost" onClick={() => handleEdit(section.id)}>
+                    <Edit2 size={16} /> Edit
+                  </button>
+                )}
+              </div>
+
+              <div className={styles.fieldGrid}>
+                {section.keys.map((schemaKey) => {
+                  const def = schema[schemaKey];
+                  if (!def) return null;
+                  
+                  if (!isFieldVisible(def, currentData)) return null;
+
+                  const profileKey = getProfileKey(schemaKey);
+                  const val = currentData[profileKey];
+
+                  if (isEditing) {
+                    return (
+                      <div key={schemaKey} className={styles.fieldRow}>
+                        <label className={styles.fieldLabel}>{def.question}</label>
+                        <QuestionInput
+                          schemaKey={schemaKey}
+                          def={def}
+                          value={val}
+                          onChange={(newVal) => handleAnswer(schemaKey, newVal)}
+                        />
+                      </div>
+                    );
+                  }
+
+                  // Display mode
+                  let displayVal = "Not set";
+                  let isEmpty = true;
+
+                  if (val !== null && val !== undefined && val !== "") {
+                    isEmpty = false;
+                    if (typeof val === "boolean") {
+                      displayVal = val ? "Yes" : "No";
+                    } else if (Array.isArray(val)) {
+                      displayVal = val.length > 0 ? val.join(", ") : "Not set";
+                      if (val.length === 0) isEmpty = true;
+                    } else {
+                      displayVal = String(val);
+                    }
+                  }
+
+                  return (
+                    <div key={schemaKey} className={styles.fieldRow}>
+                      <span className={styles.fieldLabel}>{def.question}</span>
+                      <span className={`${styles.fieldValue} ${isEmpty ? styles.fieldValueEmpty : ""}`}>
+                        {!isEmpty && <Check size={16} className={styles.checkIcon} />}
+                        {displayVal}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {isEditing && (
+                <div className={styles.actions}>
+                  <button className="btn btn--ghost" onClick={handleCancel} disabled={saving}>Cancel</button>
+                  <button className="btn btn--primary" onClick={handleSave} disabled={saving}>
+                    {saving ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
+              )}
+              </motion.div>
+            );
+          })}
+
+          {/* Requirements Section */}
+          <motion.div 
+            id="requirements"
+            className={styles.section}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 * SECTIONS.length }}
+          >
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>Your Requirement Responses</h2>
           </div>
+          <p style={{ color: "var(--text-muted)", marginBottom: "var(--space-6)" }}>
+            Review and change your answers to specific scholarship requirements you've seen.
+          </p>
+          
+          {reqsLoading ? (
+             <div className={styles.loading}>Loading responses...</div>
+          ) : requirements.length === 0 ? (
+            <div className={styles.emptyReqs}>
+              You haven't answered any specific requirements yet. Check your dashboard to swipe on requirements!
+            </div>
+          ) : (
+            <div className={styles.reqList}>
+              {requirements.map((req) => (
+                <div key={req.id} className={styles.reqItem}>
+                  <div className={styles.reqContent}>
+                    <div className={styles.reqDescription}>{req.requirement}</div>
+                    <div className={styles.reqScholarship}>Scholarship: {req.scholarshipTitle}</div>
+                  </div>
+                  <button 
+                    className={`${styles.reqToggle} ${req.isMet ? styles.reqToggleMet : styles.reqToggleNotMet}`}
+                    onClick={() => toggleRequirement(req)}
+                  >
+                    {req.isMet ? (
+                      <><Check size={16} /> Met</>
+                    ) : (
+                      <><X size={16} /> Not Met</>
+                    )}
+                  </button>
+                </div>
+              ))}
+            </div>
+            )}
+          </motion.div>
+        </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }
 
-// ─── Question Input Component ────────────────────────────
+// ─── Question Input Component (Shared from Questionnaire) ────────────────────────────
 function QuestionInput({
   schemaKey,
   def,
   value,
   onChange,
-  searchQuery,
-  setSearchQuery,
 }: {
   schemaKey: string;
   def: QuestionDef;
   value: unknown;
   onChange: (val: unknown) => void;
-  searchQuery: string;
-  setSearchQuery: (q: string) => void;
 }) {
+  const [searchQuery, setSearchQuery] = useState("");
+
   switch (def.type) {
     case "numeric":
       return (
         <div>
           <input
             type="number"
-            className={`input ${styles.numericInput}`}
+            className={`input ${styles.input}`}
             value={value !== null && value !== undefined ? String(value) : ""}
             onChange={(e) => {
               const num = e.target.value === "" ? null : Number(e.target.value);
@@ -440,7 +542,7 @@ function QuestionInput({
       return (
         <input
           type="text"
-          className={`input ${styles.textInput}`}
+          className={`input ${styles.input}`}
           value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange(e.target.value)}
           placeholder="Type your answer..."
@@ -597,7 +699,7 @@ function QuestionInput({
       return (
         <input
           type="text"
-          className={`input ${styles.textInput}`}
+          className={`input ${styles.input}`}
           value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange(e.target.value)}
           placeholder="Type your answer..."

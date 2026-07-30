@@ -23,7 +23,8 @@ export default function LandingPage() {
             ✦ Free scholarship matching for students
           </span>
           <h1 className={styles.heroTitle}>
-            Find scholarships you{" "}
+            Find scholarships you
+            <br />
             <span className={styles.heroTitleAccent}>actually qualify for</span>
           </h1>
           <p className={styles.heroSubtitle}>

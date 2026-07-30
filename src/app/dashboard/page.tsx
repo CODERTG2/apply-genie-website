@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import RequirementSwiper from "@/components/RequirementSwiper";
 import styles from "./page.module.css";
 
 // All profile fields that matter for completion tracking
@@ -127,9 +128,18 @@ export default function DashboardPage() {
           <Link href="/scholarships" className="btn btn--primary btn--large">
             View {matchCount} Matched Scholarships
           </Link>
-          <Link href="/questionnaire" className="btn btn--ghost btn--large">
+          <Link href="/profile" className="btn btn--ghost btn--large">
             Edit Profile
           </Link>
+        </div>
+
+        {/* Specific Requirements Swiper */}
+        <div className={styles.savedSection} style={{ marginBottom: "var(--space-10)" }}>
+          <h2 className={styles.savedTitle}>Refine Your Matches</h2>
+          <p className={styles.greetingSubtitle} style={{ marginBottom: "var(--space-6)" }}>
+            Swipe right if you meet the specific requirement, or left if you don't, to improve your match accuracy.
+          </p>
+          <RequirementSwiper />
         </div>
 
         {/* Saved Scholarships */}

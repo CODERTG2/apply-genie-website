@@ -80,3 +80,13 @@ export const savedScholarships = sqliteTable('saved_scholarships', {
   scholarshipTitle: text('scholarship_title').notNull(),
   savedAt: text('saved_at').default(sql`(datetime('now'))`).notNull(),
 });
+
+// ─── User Requirement Responses ──────────────────────────
+// Tracks user pass/fail responses to SpecificRequirements
+export const userRequirementResponses = sqliteTable('user_requirement_responses', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id').notNull().references(() => users.clerkId, { onDelete: 'cascade' }),
+  requirement: text('requirement').notNull(),
+  isMet: integer('is_met', { mode: 'boolean' }).notNull(),
+  answeredAt: text('answered_at').default(sql`(datetime('now'))`).notNull(),
+});

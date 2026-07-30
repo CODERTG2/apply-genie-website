@@ -24,7 +24,7 @@ export default function Header() {
               <Link href="/dashboard" className={styles.navLink}>
                 Dashboard
               </Link>
-              <Link href="/questionnaire" className={styles.navLink}>
+              <Link href="/profile" className={styles.navLink}>
                 Profile
               </Link>
               <Link href="/scholarships" className={styles.navLink}>

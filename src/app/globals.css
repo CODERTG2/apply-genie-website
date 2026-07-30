@@ -40,8 +40,7 @@
   --success-text: #059669;
 
   /* --- Typography --- */
-  --font-display: 'DM Serif Display', Georgia, serif;
-  --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* Fonts are injected via CSS variables from Next.js in layout.tsx */
 
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;

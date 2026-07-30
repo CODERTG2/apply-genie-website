@@ -60,6 +60,7 @@
 
 .heroTitle {
   font-family: var(--font-display);
+  font-weight: 400;
   font-size: var(--text-6xl);
   color: var(--text-heading);
   max-width: 800px;
@@ -102,7 +103,8 @@
 }
 
 .heroStatNumber {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
+  font-weight: 700;
   font-size: var(--text-3xl);
   color: var(--brand-gold);
   display: block;
@@ -224,7 +226,8 @@
 }
 
 .statValue {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
+  font-weight: 700;
   font-size: var(--text-4xl);
   color: var(--brand-gold);
   margin-bottom: var(--space-2);

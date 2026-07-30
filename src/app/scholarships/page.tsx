@@ -15,7 +15,23 @@ type Scholarship = {
   matchedFields: number;
   totalFields: number;
   matchScore: number;
+  parsedDeadline?: { display: string; date: Date | null };
 };
+
+function formatDeadline(deadlineStr: string): { display: string, date: Date | null } {
+  if (!deadlineStr) return { display: "N/A", date: null };
+  const match = deadlineStr.match(/([a-zA-Z]+\s+\d{1,2},\s+\d{4})/);
+  if (match) {
+    const d = new Date(match[1]);
+    if (!isNaN(d.getTime())) {
+      return {
+        display: match[1],
+        date: d
+      };
+    }
+  }
+  return { display: "N/A", date: null };
+}
 
 export default function ScholarshipsPage() {
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
@@ -23,6 +39,7 @@ export default function ScholarshipsPage() {
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<"match" | "deadline" | "amount">("match");
   const [total, setTotal] = useState(0);
+  const [hasUnansweredReqs, setHasUnansweredReqs] = useState(false);
 
   // Load scholarships and saved list
   useEffect(() => {
@@ -31,8 +48,14 @@ export default function ScholarshipsPage() {
       fetch("/api/scholarships/save").then((r) => r.json()),
     ])
       .then(([matchData, savedData]) => {
-        setScholarships(matchData.scholarships || []);
+        setScholarships(
+          (matchData.scholarships || []).map((s: Scholarship) => ({
+            ...s,
+            parsedDeadline: formatDeadline(s.deadline)
+          }))
+        );
         setTotal(matchData.total || 0);
+        setHasUnansweredReqs(matchData.hasUnansweredReqs || false);
         const saved = new Set<string>(
           (savedData.saved || []).map((s: { scholarshipTitle: string }) => s.scholarshipTitle)
         );
@@ -76,6 +99,32 @@ export default function ScholarshipsPage() {
       };
       return extractAmount(b.funds) - extractAmount(a.funds);
     }
+    if (sortBy === "deadline") {
+      const dateA = a.parsedDeadline?.date;
+      const dateB = b.parsedDeadline?.date;
+      
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
+      const getPriority = (d?: Date | null) => {
+        if (!d) return 2; // N/A
+        if (d.getTime() < now.getTime()) return 1; // Past
+        return 0; // Upcoming
+      };
+
+      const prioA = getPriority(dateA);
+      const prioB = getPriority(dateB);
+
+      if (prioA !== prioB) {
+        return prioA - prioB;
+      }
+
+      if (dateA && dateB) {
+        return dateA.getTime() - dateB.getTime();
+      }
+      
+      return 0;
+    }
     return 0;
   });
 
@@ -98,6 +147,28 @@ export default function ScholarshipsPage() {
             <span className={styles.matchCount}>{total}</span> scholarships match your profile
           </p>
         </div>
+
+        {hasUnansweredReqs && (
+          <div style={{
+            backgroundColor: "rgba(234, 179, 8, 0.1)",
+            border: "1px solid rgba(234, 179, 8, 0.5)",
+            borderRadius: "var(--radius-md)",
+            padding: "var(--space-4)",
+            marginBottom: "var(--space-6)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontSize: "0.875rem"
+          }}>
+            <div>
+              <strong style={{ color: "var(--color-primary)", display: "block", marginBottom: "4px" }}>Improve your match scores!</strong>
+              You have some specific scholarship requirements you haven't answered yet.
+            </div>
+            <Link href="/dashboard" className="btn btn--primary" style={{ padding: "8px 16px" }}>
+              Answer Now
+            </Link>
+          </div>
+        )}
 
         {scholarships.length === 0 ? (
           <div className={styles.emptyState}>
@@ -149,7 +220,7 @@ export default function ScholarshipsPage() {
                     </div>
                     <div className={styles.metaItem}>
                       <span className={styles.metaLabel}>Deadline</span>
-                      <span className={styles.metaValue}>{s.deadline}</span>
+                      <span className={styles.metaValue}>{s.parsedDeadline?.display || "N/A"}</span>
                     </div>
                   </div>
 

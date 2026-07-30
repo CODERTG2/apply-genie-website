@@ -6,7 +6,7 @@ import { useTheme } from "next-themes";
 import styles from "./ThemeToggle.module.css";
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
 
   // Avoid hydration mismatch by waiting for mount
@@ -16,19 +16,20 @@ export function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <button className={styles.toggle} aria-label="Toggle theme" disabled>
+      <button className={styles.toggle} aria-label="Toggle theme" type="button">
         <div className={styles.icon} />
       </button>
     );
   }
 
-  const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const isDark = (theme === "system" ? resolvedTheme : theme) === "dark";
 
   return (
     <button
       className={styles.toggle}
       onClick={() => setTheme(isDark ? "light" : "dark")}
       aria-label="Toggle theme"
+      type="button"
     >
       {isDark ? (
         <Sun className={styles.icon} />
