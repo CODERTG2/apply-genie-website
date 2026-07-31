@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import styles from "./page.module.css";
-import attributeSchema from "../../../attribute_schema.json";
-import entityDb from "../../../entity_db.json";
+import { Loader2 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────
 type QuestionType = "numeric" | "single_select" | "multi_select" | "boolean" | "text" | "entity_lookup" | "entity_lookup_multi" | "numeric_entity_map";
@@ -66,8 +65,7 @@ const keyToProfileKey: Record<string, string> = {
   career_goals: "careerGoals",
 };
 
-const entityDatabase = entityDb as Record<string, string[]>;
-
+// Loaded dynamically via API now
 export default function QuestionnairePage() {
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [currentStep, setCurrentStep] = useState(0);
@@ -77,8 +75,9 @@ export default function QuestionnairePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
 
-  const schema = attributeSchema as SchemaMap;
-
+  const [schema, setSchema] = useState<SchemaMap>({});
+  const [entityDatabase, setEntityDatabase] = useState<Record<string, string[]>>({});
+  const [configLoading, setConfigLoading] = useState(true);
   // Build ordered list of visible questions based on dependencies
   const visibleQuestions = useMemo(() => {
     const allQuestions = Object.entries(schema)
@@ -113,20 +112,29 @@ export default function QuestionnairePage() {
 
   // Load existing profile on mount
   useEffect(() => {
-    fetch("/api/profile")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.profile) {
-          setAnswers(data.profile);
-          if (data.completed) {
+    Promise.all([
+      fetch("/api/profile").then((res) => res.json()),
+      fetch("/api/schema").then((res) => res.json()),
+      fetch("/api/entity-db").then((res) => res.json()),
+    ])
+      .then(([profileData, schemaData, entityData]) => {
+        if (profileData.profile) {
+          setAnswers(profileData.profile);
+          if (profileData.completed) {
             setCompleted(true);
             router.push("/profile");
           }
         }
+        if (schemaData) setSchema(schemaData);
+        if (entityData) setEntityDatabase(entityData);
         setLoading(false);
+        setConfigLoading(false);
       })
-      .catch(() => setLoading(false));
-  }, []);
+      .catch(() => {
+        setLoading(false);
+        setConfigLoading(false);
+      });
+  }, [router]);
 
   // Get the profile key for current question
   const getProfileKey = useCallback(
@@ -225,11 +233,29 @@ export default function QuestionnairePage() {
     );
   }
 
+  if (loading || configLoading) {
+    return (
+      <div className={styles.questionnairePage}>
+        <Header />
+        <div className={styles.container}>
+          <div className={styles.loadingState}>
+            <Loader2 className={styles.spinner} size={48} />
+            <p>Loading questionnaire...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!currentQuestion) {
     return (
       <div className={styles.questionnairePage}>
         <Header />
-        <div className={styles.loading}>No questions available.</div>
+        <div className={styles.container}>
+          <div className={styles.loadingState}>
+            <p>No questions available.</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -270,6 +296,7 @@ export default function QuestionnairePage() {
             onChange={(val) => handleAnswer(schemaKey, val)}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
+            entityDatabase={entityDatabase}
           />
         </div>
 
@@ -320,13 +347,15 @@ function QuestionInput({
   onChange,
   searchQuery,
   setSearchQuery,
+  entityDatabase,
 }: {
   schemaKey: string;
   def: QuestionDef;
   value: unknown;
   onChange: (val: unknown) => void;
   searchQuery: string;
-  setSearchQuery: (q: string) => void;
+  setSearchQuery: (val: string) => void;
+  entityDatabase: Record<string, string[]>;
 }) {
   switch (def.type) {
     case "numeric":

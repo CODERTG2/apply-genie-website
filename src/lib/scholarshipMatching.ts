@@ -9,16 +9,17 @@ export type SpecificRequirement = {
 };
 
 export type Scholarship = {
-  Title: string;
-  Organization?: string;
-  Funds?: string;
-  Deadline?: string;
-  Deadline_Date?: string;
-  Link?: string;
-  Purpose?: string;
-  Qualifications?: string;
-  Attributes?: ScholarshipAttributes;
-  SpecificRequirements?: SpecificRequirement[];
+  id: number;
+  title: string;
+  organization?: string | null;
+  funds?: string | null;
+  deadline?: string | null;
+  deadlineDate?: string | null;
+  link?: string | null;
+  purpose?: string | null;
+  qualifications?: string | null;
+  attributes?: ScholarshipAttributes | null;
+  specificRequirements?: SpecificRequirement[] | null;
   [key: string]: unknown;
 };
 

@@ -1,8 +1,7 @@
 import { db } from "@/db";
-import { userProfiles, userRequirementResponses } from "@/db/schema";
+import { userProfiles, userRequirementResponses, scholarships as scholarshipsTable } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
-import scholarshipsData from "../../../../current_scholarships.json";
 import { matchScholarship, Scholarship, SpecificRequirement } from "@/lib/scholarshipMatching";
 
 export async function GET() {
@@ -21,23 +20,25 @@ export async function GET() {
   const profileRecord = profile as unknown as Record<string, unknown>;
   const reqsWithScore: Array<{ req: SpecificRequirement, score: number, scholarshipTitle: string }> = [];
 
-  for (const s of scholarshipsData as Scholarship[]) {
-    if (!s.Attributes || Object.keys(s.Attributes).length === 0) continue;
-    if (!s.SpecificRequirements || s.SpecificRequirements.length === 0) continue;
+  const dbScholarships = await db.select().from(scholarshipsTable);
+
+  for (const s of dbScholarships as unknown as Scholarship[]) {
+    if (!s.attributes || Object.keys(s.attributes).length === 0) continue;
+    if (!s.specificRequirements || s.specificRequirements.length === 0) continue;
 
     const { matches, matchedFields, totalFields } = matchScholarship(
       profileRecord,
-      s.Attributes,
-      s.SpecificRequirements,
+      s.attributes,
+      s.specificRequirements,
       userResponsesMap
     );
 
     if (matches && totalFields > 0) {
       const matchScore = Math.round((matchedFields / totalFields) * 100);
       
-      for (const req of s.SpecificRequirements) {
+      for (const req of s.specificRequirements) {
         if (userResponsesMap[req.description] === undefined) {
-          reqsWithScore.push({ req, score: matchScore, scholarshipTitle: s.Title });
+          reqsWithScore.push({ req, score: matchScore, scholarshipTitle: s.title });
         }
       }
     }

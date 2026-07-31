@@ -1,8 +1,7 @@
 import { db } from "@/db";
-import { userRequirementResponses } from "@/db/schema";
+import { userRequirementResponses, scholarships as scholarshipsTable } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
-import scholarshipsData from "../../../../../current_scholarships.json";
 import { Scholarship } from "@/lib/scholarshipMatching";
 
 export async function GET() {
@@ -17,11 +16,13 @@ export async function GET() {
 
   // Map requirement descriptions to scholarship titles
   const reqToTitle: Record<string, string> = {};
-  for (const s of scholarshipsData as Scholarship[]) {
-    if (!s.SpecificRequirements || s.SpecificRequirements.length === 0) continue;
-    for (const req of s.SpecificRequirements) {
+  
+  const dbScholarships = await db.select().from(scholarshipsTable);
+  for (const s of dbScholarships as unknown as Scholarship[]) {
+    if (!s.specificRequirements || s.specificRequirements.length === 0) continue;
+    for (const req of s.specificRequirements) {
       if (!reqToTitle[req.description]) {
-        reqToTitle[req.description] = s.Title;
+        reqToTitle[req.description] = s.title;
       }
     }
   }

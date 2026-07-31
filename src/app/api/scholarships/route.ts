@@ -1,8 +1,7 @@
 import { db } from "@/db";
-import { userProfiles, userRequirementResponses } from "@/db/schema";
+import { userProfiles, userRequirementResponses, scholarships as scholarshipsTable } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
-import scholarshipsData from "../../../../current_scholarships.json";
 import { matchScholarship, Scholarship } from "@/lib/scholarshipMatching";
 
 export async function GET() {
@@ -52,13 +51,15 @@ export async function GET() {
     unansweredReqsCount: number;
   }> = [];
 
-  for (const s of scholarshipsData as Scholarship[]) {
-    if (!s.Attributes || Object.keys(s.Attributes).length === 0) continue;
+  const dbScholarships = await db.select().from(scholarshipsTable);
+
+  for (const s of dbScholarships as unknown as Scholarship[]) {
+    if (!s.attributes || Object.keys(s.attributes).length === 0) continue;
 
     const { matches, matchedFields, totalFields, unansweredReqsCount } = matchScholarship(
       profileRecord,
-      s.Attributes,
-      s.SpecificRequirements || [],
+      s.attributes,
+      s.specificRequirements || [],
       userResponsesMap
     );
     
@@ -66,12 +67,12 @@ export async function GET() {
 
     if (matches && totalFields > 0) {
       results.push({
-        title: s.Title,
-        organization: typeof s.Organization === "string" ? s.Organization.split("\n")[0] : "",
-        funds: typeof s.Funds === "string" ? s.Funds : "Varies",
-        deadline: typeof s.Deadline_Date === "string" ? s.Deadline_Date : "",
-        link: typeof s.Link === "string" ? s.Link : "",
-        purpose: typeof s.Purpose === "string" ? s.Purpose.slice(0, 200) : "",
+        title: s.title || "",
+        organization: typeof s.organization === "string" ? s.organization.split("\n")[0] : "",
+        funds: typeof s.funds === "string" ? s.funds : "Varies",
+        deadline: typeof s.deadlineDate === "string" ? s.deadlineDate : "",
+        link: typeof s.link === "string" ? s.link : "",
+        purpose: typeof s.purpose === "string" ? s.purpose.slice(0, 200) : "",
         matchedFields,
         totalFields,
         matchScore: Math.round((matchedFields / totalFields) * 100),

@@ -4,9 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import styles from "./page.module.css";
-import attributeSchema from "../../../attribute_schema.json";
-import entityDb from "../../../entity_db.json";
-import { Check, X, Edit2 } from "lucide-react";
+import { Check, X, Edit2, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 // Types
@@ -66,9 +64,7 @@ const keyToProfileKey: Record<string, string> = {
   career_goals: "careerGoals",
 };
 
-const entityDatabase = entityDb as Record<string, string[]>;
-const schema = attributeSchema as SchemaMap;
-
+// They will be loaded dynamically via API now
 const SECTIONS = [
   {
     id: "demographics",
@@ -117,16 +113,27 @@ export default function ProfilePage() {
   const [requirements, setRequirements] = useState<Array<any>>([]);
   const [reqsLoading, setReqsLoading] = useState(true);
 
+  const [schema, setSchema] = useState<SchemaMap>({});
+  const [entityDatabase, setEntityDatabase] = useState<Record<string, string[]>>({});
+  const [configLoading, setConfigLoading] = useState(true);
+
   useEffect(() => {
-    fetch("/api/profile")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.profile) {
-          setAnswers(data.profile);
-        }
+    Promise.all([
+      fetch("/api/profile").then((res) => res.json()),
+      fetch("/api/schema").then((res) => res.json()),
+      fetch("/api/entity-db").then((res) => res.json()),
+    ])
+      .then(([profileData, schemaData, entityData]) => {
+        if (profileData.profile) setAnswers(profileData.profile);
+        if (schemaData) setSchema(schemaData);
+        if (entityData) setEntityDatabase(entityData);
         setLoading(false);
+        setConfigLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setLoading(false);
+        setConfigLoading(false);
+      });
       
     fetchRequirements();
   }, []);
@@ -319,6 +326,9 @@ export default function ProfilePage() {
                           def={def}
                           value={val}
                           onChange={(newVal) => handleAnswer(schemaKey, newVal)}
+                          searchQuery={""}
+                          setSearchQuery={() => {}}
+                          entityDatabase={entityDatabase}
                         />
                       </div>
                     );
@@ -335,6 +345,10 @@ export default function ProfilePage() {
                     } else if (Array.isArray(val)) {
                       displayVal = val.length > 0 ? val.join(", ") : "Not set";
                       if (val.length === 0) isEmpty = true;
+                    } else if (typeof val === "object") {
+                      const entries = Object.entries(val as Record<string, unknown>);
+                      displayVal = entries.length > 0 ? entries.map(([k, v]) => `${k}: ${v}`).join(", ") : "Not set";
+                      if (entries.length === 0) isEmpty = true;
                     } else {
                       displayVal = String(val);
                     }
@@ -422,13 +436,18 @@ function QuestionInput({
   def,
   value,
   onChange,
+  searchQuery,
+  setSearchQuery,
+  entityDatabase,
 }: {
   schemaKey: string;
   def: QuestionDef;
   value: unknown;
   onChange: (val: unknown) => void;
+  searchQuery: string;
+  setSearchQuery: (val: string) => void;
+  entityDatabase: Record<string, string[]>;
 }) {
-  const [searchQuery, setSearchQuery] = useState("");
 
   switch (def.type) {
     case "numeric":
@@ -687,6 +706,76 @@ function QuestionInput({
                 className={`${styles.optionIndicator} ${selected.includes(def.na_label) ? styles.optionIndicatorSelected : ""}`}
               >
                 {selected.includes(def.na_label) && <span className={styles.optionIndicatorDot} />}
+              </span>
+              {def.na_label}
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    case "numeric_entity_map": {
+      const dbKey = def.db_key || "";
+      const options = entityDatabase[dbKey] || [];
+      const mapVal =
+        typeof value === "object" && value !== null && !Array.isArray(value)
+          ? (value as Record<string, number | string>)
+          : {};
+      const isNa = value === def.na_label;
+
+      return (
+        <div className={styles.searchableWrapper}>
+          <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", marginBottom: "var(--space-3)" }}>
+            {options.map((testName) => {
+              const currentScore = mapVal[testName] ?? "";
+              return (
+                <div
+                  key={testName}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-2)",
+                    background: "var(--surface-subtle)",
+                    padding: "var(--space-2) var(--space-3)",
+                    borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--border-subtle)",
+                  }}
+                >
+                  <span style={{ fontWeight: 500, fontSize: "0.875rem" }}>{testName}:</span>
+                  <input
+                    type="number"
+                    className="input"
+                    style={{ width: "90px", padding: "4px 8px" }}
+                    placeholder="Score"
+                    value={currentScore !== undefined && currentScore !== null ? String(currentScore) : ""}
+                    onChange={(e) => {
+                      const num = e.target.value === "" ? undefined : Number(e.target.value);
+                      const nextMap = { ...mapVal };
+                      if (num === undefined) {
+                        delete nextMap[testName];
+                      } else {
+                        nextMap[testName] = num;
+                      }
+                      onChange(Object.keys(nextMap).length > 0 ? nextMap : null);
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          {def.optional_na && def.na_label && (
+            <button
+              className={`${styles.optionButton} ${isNa ? styles.optionButtonSelected : ""}`}
+              onClick={() => {
+                onChange(isNa ? null : def.na_label);
+              }}
+              style={{ marginTop: "var(--space-2)", maxWidth: 300 }}
+            >
+              <span
+                className={`${styles.optionIndicator} ${isNa ? styles.optionIndicatorSelected : ""}`}
+              >
+                {isNa && <span className={styles.optionIndicatorDot} />}
               </span>
               {def.na_label}
             </button>
