@@ -54,5 +54,7 @@ GEMINI.md
 .artifacts/
 
 # Files
-*.json
+attribute_schema.json
+current_scholarships.json
+entity_db.json
 *.csv
