@@ -5,11 +5,13 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import styles from "./page.module.css";
 
-// Count scholarships from the JSON for the stats section
-import scholarships from "../../current_scholarships.json";
+import { db } from "@/db";
+import { scholarships as scholarshipsTable } from "@/db/schema";
+import { count } from "drizzle-orm";
 
-export default function LandingPage() {
-  const scholarshipCount = scholarships.length;
+export default async function LandingPage() {
+  const result = await db.select({ value: count() }).from(scholarshipsTable);
+  const scholarshipCount = result[0].value;
 
   return (
     <div className={styles.landing}>
