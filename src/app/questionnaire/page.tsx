@@ -87,18 +87,18 @@ export default function QuestionnairePage() {
       if (!def.depends_on) return true;
 
       for (const [depKey, depValues] of Object.entries(def.depends_on)) {
-        const profileKey = keyToProfileKey[depKey];
-        const userAnswer = answers[profileKey];
+        const profileKey = keyToProfileKey[depKey] || depKey;
+        const userAnswer = answers[profileKey] ?? answers[depKey];
 
         if (depValues === "*") {
           // Any non-null answer satisfies
           if (userAnswer === null || userAnswer === undefined || userAnswer === "") return false;
-        } else if (Array.isArray(depValues)) {
-          // User's answer must match one of the required values
+        } else {
+          const allowed = Array.isArray(depValues) ? depValues : [depValues];
           if (Array.isArray(userAnswer)) {
-            if (!depValues.some((dv) => userAnswer.includes(dv))) return false;
+            if (!allowed.some((dv) => userAnswer.includes(dv))) return false;
           } else {
-            if (!depValues.includes(userAnswer as string)) return false;
+            if (!allowed.includes(userAnswer as string)) return false;
           }
         }
       }
