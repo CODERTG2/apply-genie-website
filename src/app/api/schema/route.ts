@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { attributeSchema } from '@/db/schema';
 
-// Revalidate cache every 24 hours to reduce Turso quota usage
-export const revalidate = 86400;
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
