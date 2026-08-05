@@ -21,6 +21,15 @@ const optionalStringArrayOrString = z
   .nullable()
   .optional();
 
+const optionalMembershipsArray = z
+  .union([
+    z.array(z.object({ organization: z.string(), status: z.string() })),
+    z.array(z.string().max(200)), // legacy fallback
+    z.string().max(1000)
+  ])
+  .nullable()
+  .optional();
+
 const optionalNumber = (min?: number, max?: number) => {
   let numSchema = z.number();
   if (min !== undefined) numSchema = numSchema.min(min);
@@ -65,6 +74,7 @@ export const profileSchema = z
     // === Education ===
     educationType: optionalStringArrayOrString,
     degreePursuing: optionalStringArrayOrString,
+    degreesHeld: optionalStringArrayOrString,
     yearOfStudy: optionalStringArrayOrString,
     enrollmentStatus: optionalString,
     institutionName: optionalString,
@@ -96,7 +106,7 @@ export const profileSchema = z
 
     // === Activities & Goals ===
     communityService: z.boolean().nullable().optional(),
-    memberships: optionalStringArrayOrString,
+    memberships: optionalMembershipsArray,
     careerGoals: optionalStringArrayOrString,
 
     // === Metadata ===
@@ -182,6 +192,7 @@ const JSON_FIELDS = [
   "ethnicity",
   "educationType",
   "degreePursuing",
+  "degreesHeld",
   "yearOfStudy",
   "institutionType",
   "fieldOfStudy",

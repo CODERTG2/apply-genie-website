@@ -37,6 +37,7 @@ export const PROFILE_TO_ATTR: Record<string, string> = {
   visaType: "visa_type",
   educationType: "education_type",
   degreePursuing: "degree_pursuing",
+  degreesHeld: "degrees_held",
   yearOfStudy: "year_of_study",
   enrollmentStatus: "enrollment_status",
   institutionName: "institution_name",
@@ -60,7 +61,7 @@ export const PROFILE_TO_ATTR: Record<string, string> = {
 
 // JSON-encoded multi-select fields
 export const JSON_FIELDS = new Set([
-  "race", "ethnicity", "educationType", "degreePursuing",
+  "race", "ethnicity", "educationType", "degreePursuing", "degreesHeld",
   "yearOfStudy", "institutionType", "fieldOfStudy",
   "military", "medicalConditionDetail", "memberships", "careerGoals",
 ]);
@@ -140,8 +141,15 @@ export function matchScholarship(
     // Array requirements: user must have at least one matching value
     if (Array.isArray(requirement)) {
       const userValues = JSON_FIELDS.has(profileKey) ? parseJsonField(userValue) : [userValue];
-      const hasOverlap = requirement.some((r: string) =>
-        userValues.some((uv) => typeof uv === "string" && uv.toLowerCase() === r.toLowerCase())
+      const hasOverlap = requirement.some((r: any) =>
+        userValues.some((uv: any) => {
+          const rStr = typeof r === "object" && r !== null && r.organization ? r.organization : (typeof r === "string" ? r : null);
+          const uvStr = typeof uv === "object" && uv !== null && uv.organization ? uv.organization : (typeof uv === "string" ? uv : null);
+          if (rStr && uvStr) {
+            return rStr.toLowerCase() === uvStr.toLowerCase();
+          }
+          return false;
+        })
       );
       if (!hasOverlap) return { matches: false, matchedFields, totalFields, unansweredReqsCount };
       matchedFields++;
