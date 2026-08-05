@@ -102,6 +102,7 @@ export const userProfiles = sqliteTable('user_profiles', {
   // === Education (order 11–18) ===
   educationType: encryptedText('education_type'),       // multi_select → JSON
   degreePursuing: encryptedText('degree_pursuing'),      // multi_select → JSON
+  degreesHeld: encryptedText('degrees_held'),            // multi_select → JSON
   yearOfStudy: encryptedText('year_of_study'),           // multi_select → JSON
   enrollmentStatus: encryptedText('enrollment_status'),
   institutionName: encryptedText('institution_name'),
@@ -191,6 +192,8 @@ export const scholarships = sqliteTable('scholarships', {
   forMoreInformation: text('for_more_information', { mode: 'json' }), 
   attributes: text('attributes', { mode: 'json' }), 
   specificRequirements: text('specific_requirements', { mode: 'json' }), 
+  criteriaExtracted: text('criteria_extracted', { mode: 'json' }),
+  submissionRequirements: text('submission_requirements', { mode: 'json' }),
   month: text('month'),
   deadlineDate: text('deadline_date'),
 });
