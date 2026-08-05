@@ -8,7 +8,7 @@ import styles from "./page.module.css";
 import { Loader2 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────
-type QuestionType = "numeric" | "single_select" | "multi_select" | "boolean" | "text" | "entity_lookup" | "entity_lookup_multi" | "numeric_entity_map";
+type QuestionType = "numeric" | "single_select" | "multi_select" | "boolean" | "text" | "entity_lookup" | "entity_lookup_multi" | "numeric_entity_map" | "entity_lookup_multi_with_status";
 
 type QuestionDef = {
   question: string;
@@ -24,6 +24,7 @@ type QuestionDef = {
   comparison?: string;
   scale?: number;
   note?: string;
+  statuses?: string[];
 };
 
 type SchemaMap = Record<string, QuestionDef>;
@@ -43,6 +44,7 @@ const keyToProfileKey: Record<string, string> = {
   visa_type: "visaType",
   education_type: "educationType",
   degree_pursuing: "degreePursuing",
+  degrees_held: "degreesHeld",
   year_of_study: "yearOfStudy",
   enrollment_status: "enrollmentStatus",
   institution_name: "institutionName",
@@ -72,7 +74,6 @@ export default function QuestionnairePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [completed, setCompleted] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
 
   const [schema, setSchema] = useState<SchemaMap>({});
@@ -178,20 +179,17 @@ export default function QuestionnairePage() {
     // Save current progress
     await saveAnswers(answers);
     setCurrentStep((prev) => prev + 1);
-    setSearchQuery("");
   };
 
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep((prev) => prev - 1);
-      setSearchQuery("");
     }
   };
 
   const handleSkip = async () => {
     if (currentStep < totalSteps - 1) {
       setCurrentStep((prev) => prev + 1);
-      setSearchQuery("");
     } else {
       await saveAnswers(answers, true);
       setCompleted(true);
@@ -294,8 +292,6 @@ export default function QuestionnairePage() {
             def={questionDef}
             value={currentValue}
             onChange={(val) => handleAnswer(schemaKey, val)}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
             entityDatabase={entityDatabase}
           />
         </div>
@@ -345,18 +341,16 @@ function QuestionInput({
   def,
   value,
   onChange,
-  searchQuery,
-  setSearchQuery,
   entityDatabase,
 }: {
   schemaKey: string;
   def: QuestionDef;
   value: unknown;
   onChange: (val: unknown) => void;
-  searchQuery: string;
-  setSearchQuery: (val: string) => void;
   entityDatabase: Record<string, string[]>;
 }) {
+  const [searchQuery, setSearchQuery] = useState("");
+
   switch (def.type) {
     case "numeric":
       return (
@@ -480,9 +474,13 @@ function QuestionInput({
     case "entity_lookup": {
       const dbKey = def.db_key || "";
       const options = entityDatabase[dbKey] || [];
-      const filtered = searchQuery
-        ? options.filter((o) => o.toLowerCase().includes(searchQuery.toLowerCase()))
+      const safeQuery = searchQuery || "";
+      const filtered = safeQuery
+        ? options.filter((o) => o && typeof o === "string" && o.toLowerCase().includes(safeQuery.toLowerCase()))
         : options.slice(0, 20);
+
+      const allowAdd = !["career_goals", "memberships"].includes(schemaKey);
+      const exactMatch = options.find((o) => o && typeof o === "string" && o.toLowerCase() === safeQuery.trim().toLowerCase());
 
       return (
         <div className={styles.searchableWrapper}>
@@ -497,7 +495,12 @@ function QuestionInput({
             placeholder="Search..."
             id={`search-${schemaKey}`}
           />
-          {searchQuery && filtered.length > 0 && (
+          {!allowAdd && (
+            <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "4px" }}>
+              If you don't see what you are searching for, select "None of the above"
+            </p>
+          )}
+          {searchQuery && (filtered.length > 0 || (allowAdd && !exactMatch && searchQuery.trim() !== "")) && (
             <div className={styles.searchDropdown}>
               {filtered.slice(0, 15).map((opt) => (
                 <div
@@ -511,6 +514,23 @@ function QuestionInput({
                   {opt}
                 </div>
               ))}
+              {allowAdd && searchQuery.trim() !== "" && !exactMatch && (
+                <div
+                  className={styles.searchOption}
+                  onClick={() => {
+                    const newVal = searchQuery.trim();
+                    onChange(newVal);
+                    setSearchQuery("");
+                    fetch("/api/entity-db", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ category: dbKey, entity: newVal })
+                    }).catch(e => console.error(e));
+                  }}
+                >
+                  Add "{searchQuery.trim()}"
+                </div>
+              )}
             </div>
           )}
           {typeof value === "string" && value && !searchQuery && value !== def.na_label && (
@@ -548,13 +568,19 @@ function QuestionInput({
       const dbKey = def.db_key || "";
       const options = entityDatabase[dbKey] || [];
       const selected = Array.isArray(value) ? (value as string[]) : [];
-      const filtered = searchQuery
+      const safeQuery = searchQuery || "";
+      const filtered = safeQuery
         ? options.filter(
             (o) =>
-              o.toLowerCase().includes(searchQuery.toLowerCase()) &&
+              o && typeof o === "string" &&
+              o.toLowerCase().includes(safeQuery.toLowerCase()) &&
               !selected.includes(o)
           )
         : [];
+        
+      const allowAdd = !["career_goals", "memberships"].includes(schemaKey);
+      const exactMatch = options.find((o) => o && typeof o === "string" && o.toLowerCase() === safeQuery.trim().toLowerCase());
+      const alreadySelected = selected.some((s) => s && typeof s === "string" && s.toLowerCase() === safeQuery.trim().toLowerCase());
 
       return (
         <div className={styles.searchableWrapper}>
@@ -566,7 +592,12 @@ function QuestionInput({
             placeholder="Search and select..."
             id={`search-${schemaKey}`}
           />
-          {searchQuery && filtered.length > 0 && (
+          {!allowAdd && (
+            <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "4px" }}>
+              If you don't see what you are searching for, select "None of the above"
+            </p>
+          )}
+          {searchQuery && (filtered.length > 0 || (allowAdd && !exactMatch && !alreadySelected && searchQuery.trim() !== "")) && (
             <div className={styles.searchDropdown}>
               {filtered.slice(0, 15).map((opt) => (
                 <div
@@ -584,6 +615,27 @@ function QuestionInput({
                   {opt}
                 </div>
               ))}
+              {allowAdd && searchQuery.trim() !== "" && !exactMatch && !alreadySelected && (
+                <div
+                  className={styles.searchOption}
+                  onClick={() => {
+                    const newVal = searchQuery.trim();
+                    onChange(
+                      selected.includes(def.na_label as string)
+                        ? [newVal]
+                        : [...selected, newVal]
+                    );
+                    setSearchQuery("");
+                    fetch("/api/entity-db", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ category: dbKey, entity: newVal })
+                    }).catch(e => console.error(e));
+                  }}
+                >
+                  Add "{searchQuery.trim()}"
+                </div>
+              )}
             </div>
           )}
           {selected.length > 0 && (
@@ -614,6 +666,151 @@ function QuestionInput({
                 className={`${styles.optionIndicator} ${selected.includes(def.na_label) ? styles.optionIndicatorSelected : ""}`}
               >
                 {selected.includes(def.na_label) && <span className={styles.optionIndicatorDot} />}
+              </span>
+              {def.na_label}
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    case "entity_lookup_multi_with_status": {
+      const dbKey = def.db_key || "";
+      const options = entityDatabase[dbKey] || [];
+      const selected = Array.isArray(value) ? (value as any[]) : [];
+      const statuses = def.statuses || [];
+      const filtered = searchQuery
+        ? options.filter(
+            (o) =>
+              o.toLowerCase().includes(searchQuery.toLowerCase()) &&
+              !selected.some(s => s.organization === o)
+          )
+        : [];
+        
+      const allowAdd = !["career_goals", "memberships"].includes(schemaKey);
+      const exactMatch = options.find((o) => o.toLowerCase() === searchQuery.trim().toLowerCase());
+      const alreadySelected = selected.some((s) => s.organization?.toLowerCase() === searchQuery.trim().toLowerCase());
+
+      return (
+        <div className={styles.searchableWrapper}>
+          <input
+            type="text"
+            className={styles.searchInput}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search and select..."
+            id={`search-${schemaKey}`}
+          />
+          {!allowAdd && (
+            <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "4px" }}>
+              If you don't see what you are searching for, select "None of the above"
+            </p>
+          )}
+          {searchQuery && (filtered.length > 0 || (allowAdd && !exactMatch && !alreadySelected && searchQuery.trim() !== "")) && (
+            <div className={styles.searchDropdown}>
+              {filtered.slice(0, 15).map((opt) => (
+                <div
+                  key={opt}
+                  className={styles.searchOption}
+                  onClick={() => {
+                    const defaultStatus = statuses[0] || "";
+                    onChange(
+                      selected.some(s => typeof s === "string" && s === def.na_label)
+                        ? [{ organization: opt, status: defaultStatus }]
+                        : [...selected, { organization: opt, status: defaultStatus }]
+                    );
+                    setSearchQuery("");
+                  }}
+                >
+                  {opt}
+                </div>
+              ))}
+              {allowAdd && searchQuery.trim() !== "" && !exactMatch && !alreadySelected && (
+                <div
+                  className={styles.searchOption}
+                  onClick={() => {
+                    const newVal = searchQuery.trim();
+                    const defaultStatus = statuses[0] || "";
+                    onChange(
+                      selected.some(s => typeof s === "string" && s === def.na_label)
+                        ? [{ organization: newVal, status: defaultStatus }]
+                        : [...selected, { organization: newVal, status: defaultStatus }]
+                    );
+                    setSearchQuery("");
+                    fetch("/api/entity-db", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ category: dbKey, entity: newVal })
+                    }).catch(e => console.error(e));
+                  }}
+                >
+                  Add "{searchQuery.trim()}"
+                </div>
+              )}
+            </div>
+          )}
+          {selected.length > 0 && (
+            <div className={styles.selectedTags} style={{ flexDirection: "column", alignItems: "flex-start", gap: "8px" }}>
+              {selected.map((s, idx) => {
+                if (typeof s === "string") {
+                  return (
+                    <span key={`str-${idx}`} className={styles.tag}>
+                      {s}
+                      <button
+                        className={styles.tagRemove}
+                        onClick={() => onChange(selected.filter((v) => v !== s))}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                }
+                return (
+                  <div key={s.organization} style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    <span className={styles.tag}>
+                      {s.organization}
+                      <button
+                        className={styles.tagRemove}
+                        onClick={() => onChange(selected.filter((v) => v.organization !== s.organization))}
+                      >
+                        ×
+                      </button>
+                    </span>
+                    <select
+                      className={`input ${styles.textInput}`}
+                      style={{ padding: "4px 8px", minHeight: "auto", fontSize: "0.9rem", width: "auto", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+                      value={s.status || ""}
+                      onChange={(e) => {
+                        const newStatus = e.target.value;
+                        const newSelected = selected.map(item => 
+                          item.organization === s.organization ? { ...item, status: newStatus } : item
+                        );
+                        onChange(newSelected);
+                      }}
+                    >
+                      <option value="" disabled>Select Status</option>
+                      {statuses.map(st => (
+                        <option key={st} value={st}>{st}</option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {def.optional_na && def.na_label && (
+            <button
+              className={`${styles.optionButton} ${selected.some(s => typeof s === "string" && s === def.na_label) ? styles.optionButtonSelected : ""}`}
+              onClick={() => {
+                onChange(selected.some(s => typeof s === "string" && s === def.na_label) ? [] : [def.na_label]);
+                setSearchQuery("");
+              }}
+              style={{ marginTop: "var(--space-3)", maxWidth: 300 }}
+            >
+              <span
+                className={`${styles.optionIndicator} ${selected.some(s => typeof s === "string" && s === def.na_label) ? styles.optionIndicatorSelected : ""}`}
+              >
+                {selected.some(s => typeof s === "string" && s === def.na_label) && <span className={styles.optionIndicatorDot} />}
               </span>
               {def.na_label}
             </button>
