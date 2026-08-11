@@ -21,6 +21,12 @@ export default function Footer() {
           <a href="/#faq" className={styles.footerLink}>
             FAQ
           </a>
+          <a href="https://forms.gle/4mE5bVKiRBvF2Z8p7" target="_blank" rel="noopener noreferrer" className={styles.footerLink}>
+            Report an issue
+          </a>
+          <a href="https://forms.gle/RyP4sX3gsgySw8ji8" target="_blank" rel="noopener noreferrer" className={styles.footerLink}>
+            Request a feature
+          </a>
         </div>
         <p className={styles.footerCopy}>
           © {new Date().getFullYear()} Scholarship HQ. Built to help students find scholarships.
