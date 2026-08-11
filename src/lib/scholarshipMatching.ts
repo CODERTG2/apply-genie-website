@@ -6,6 +6,8 @@ export type SpecificRequirement = {
   description: string;
   category_hint?: string;
   source_text?: string;
+  question?: string;
+  yes_is_eligible?: boolean;
 };
 
 export type Scholarship = {
@@ -166,10 +168,10 @@ export function matchScholarship(
     }
   }
 
-  // Handle SpecificRequirements
   for (const req of specificRequirements) {
     totalFields++;
-    const userResponse = userRequirementResponses[req.description];
+    const reqKey = req.question || req.description;
+    const userResponse = userRequirementResponses[reqKey];
 
     if (userResponse === true) {
       matchedFields++;

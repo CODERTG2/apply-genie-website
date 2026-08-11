@@ -1,10 +1,10 @@
-# Apply Genie Website
+# Scholarship HQ Website
 A modern Next.js web application for students to discover scholarships they actually qualify for through an intelligent matching questionnaire.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./public/hero-dark.png">
   <source media="(prefers-color-scheme: light)" srcset="./public/hero-light.png">
-  <img alt="Apply Genie Hero Screenshot" src="./public/hero-dark.png">
+  <img alt="Scholarship HQ Hero Screenshot" src="./public/hero-dark.png">
 </picture>
 
 ## Quick Start
@@ -48,7 +48,7 @@ npm run dev
    The application will be available at [http://localhost:3000](http://localhost:3000).
 
 ## How it works
-This repository represents the frontend and user-facing experience of the Apply Genie ecosystem. It is built using **Next.js (App Router)** and relies on standard CSS modules for styling, intentionally avoiding utility-class frameworks to maintain complete control over dynamic theme semantics (e.g. glassmorphism).
+This repository represents the frontend and user-facing experience of the Scholarship HQ ecosystem. It is built using **Next.js (App Router)** and relies on standard CSS modules for styling, intentionally avoiding utility-class frameworks to maintain complete control over dynamic theme semantics (e.g. glassmorphism).
 
 The scholarship matching logic lives within a server-side Next.js API route (`/api/scholarships`). Instead of building complex SQL graph queries to determine eligibility, the API route reads from a static JSON database and evaluates user profiles in-memory. This allows for incredibly fast filtering across 200+ scholarships without architectural overhead.
 

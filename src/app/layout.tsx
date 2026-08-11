@@ -18,7 +18,7 @@ const displayFont = DM_Serif_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Apply Genie — Find Scholarships You Qualify For",
+  title: "Scholarship HQ — Find Scholarships You Qualify For",
   description:
     "Answer a few questions about yourself and instantly discover scholarships that match your profile. Free, fast, and personalized.",
 };

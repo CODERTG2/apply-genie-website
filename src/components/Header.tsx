@@ -14,7 +14,7 @@ export default function Header() {
         <Link href="/" className={styles.logo} id="logo-link">
           <span className={styles.logoIcon}>✦</span>
           <span className={styles.logoText}>
-            Apply<span className={styles.logoAccent}>Genie</span>
+            Scholarship<span className={styles.logoAccent}>HQ</span>
           </span>
         </Link>
 
@@ -33,10 +33,13 @@ export default function Header() {
             </>
           ) : (
             <>
-              <a href="#how-it-works" className={styles.navLink}>
+              <Link href="/about" className={styles.navLink}>
+                About
+              </Link>
+              <a href="/#how-it-works" className={styles.navLink}>
                 How It Works
               </a>
-              <a href="#faq" className={styles.navLink}>
+              <a href="/#faq" className={styles.navLink}>
                 FAQ
               </a>
             </>

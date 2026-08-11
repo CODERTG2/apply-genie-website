@@ -49,6 +49,8 @@ export async function GET() {
     totalFields: number;
     matchScore: number;
     unansweredReqsCount: number;
+    criteriaCount: number;
+    submissionRequirementsCount: number;
   }> = [];
 
   const dbScholarships = await db.select().from(scholarshipsTable);
@@ -77,6 +79,8 @@ export async function GET() {
         totalFields,
         matchScore: Math.round((matchedFields / totalFields) * 100),
         unansweredReqsCount,
+        criteriaCount: Array.isArray(s.criteriaExtracted) ? s.criteriaExtracted.length : 0,
+        submissionRequirementsCount: Array.isArray(s.submissionRequirements) ? s.submissionRequirements.length : 0,
       });
     }
   }

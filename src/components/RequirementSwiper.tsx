@@ -9,6 +9,8 @@ type Requirement = {
   description: string;
   category_hint?: string;
   source_text?: string;
+  question?: string;
+  yes_is_eligible?: boolean;
   associatedScholarshipScore: number;
   scholarshipTitle: string;
 };
@@ -160,7 +162,7 @@ function SwipeCard({
             color: "var(--text-heading)",
             margin: 0
           }}>
-            {req.description}
+            {req.question || req.description}
           </h3>
         </div>
 
@@ -267,7 +269,9 @@ export default function RequirementSwiper() {
   }
 
   const handleSwipe = async (direction: "left" | "right", requirement: Requirement) => {
-    const isMet = direction === "right";
+    const isYes = direction === "right";
+    const yesIsEligible = requirement.yes_is_eligible ?? true;
+    const isMet = isYes === yesIsEligible;
 
     // Optimistic UI update
     setRequirements((prev) => prev.slice(1));
@@ -276,7 +280,7 @@ export default function RequirementSwiper() {
       await fetch("/api/requirements", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requirement: requirement.description, isMet }),
+        body: JSON.stringify({ requirement: requirement.question || requirement.description, isMet }),
       });
     } catch (error) {
       console.error("Failed to submit swipe", error);

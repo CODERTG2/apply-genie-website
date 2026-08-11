@@ -1,5 +1,5 @@
 /* ============================================================
-   Apply Genie — Modern Design System (Light/Dark Mode)
+   Scholarship HQ — Modern Design System (Light/Dark Mode)
    Typography: DM Serif Display (display) + DM Sans (body)
    ============================================================ */
 
@@ -99,34 +99,34 @@
 
 [data-theme='dark'] {
   /* --- Semantic Colors: Dark Theme --- */
-  --bg-base: #0B1120;
-  --bg-surface: #1E293B;
-  --bg-surface-hover: #334155;
-  --bg-glass: rgba(15, 23, 42, 0.8);
+  --bg-base: #0A0F17; /* Very deep midnight / Oxford blue */
+  --bg-surface: #121A25; /* Rich navy surface */
+  --bg-surface-hover: #1B2636;
+  --bg-glass: rgba(10, 15, 23, 0.8);
   
-  --text-heading: #F8FAFC;
-  --text-body: #CBD5E1;
-  --text-muted: #94A3B8;
+  --text-heading: #F7F5F0; /* Warm cream to match light mode bg, adds elegance */
+  --text-body: #A5B6C9; /* Soft, readable grey-blue */
+  --text-muted: #6B7C93;
   --text-on-accent: #FFFFFF;
-  --text-on-gold: #0F1B2D;
+  --text-on-gold: #0A0F17;
 
-  --border-subtle: #334155;
-  --border-strong: #475569;
+  --border-subtle: #1E2A3C;
+  --border-strong: #33445C;
 
-  --accent-main: #3B82F6;
-  --accent-hover: #60A5FA;
-  --accent-glow: rgba(59, 130, 246, 0.2);
+  --accent-main: #528BFF; /* Brighter, vibrant but elegant blue */
+  --accent-hover: #77A4FF;
+  --accent-glow: rgba(82, 139, 255, 0.2);
 
-  --brand-gold: #E8A838;
-  --brand-gold-hover: #FBBF24;
+  --brand-gold: #E8A838; /* Keeping the same brand gold */
+  --brand-gold-hover: #F2BA5A;
   --brand-gold-glow: rgba(232, 168, 56, 0.15);
 
   --success-bg: rgba(16, 185, 129, 0.15);
   --success-text: #34D399;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.8);
 }
 
 /* --- Base Styles --- */
