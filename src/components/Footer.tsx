@@ -6,21 +6,24 @@ export default function Footer() {
     <footer className={styles.footer} id="site-footer">
       <div className={styles.footerInner}>
         <div className={styles.footerBrand}>
-          Apply<span className={styles.footerAccent}>Genie</span>
+          Scholarship<span className={styles.footerAccent}>HQ</span>
         </div>
         <div className={styles.footerLinks}>
           <Link href="/" className={styles.footerLink}>
             Home
           </Link>
-          <a href="#how-it-works" className={styles.footerLink}>
+          <Link href="/about" className={styles.footerLink}>
+            About
+          </Link>
+          <a href="/#how-it-works" className={styles.footerLink}>
             How It Works
           </a>
-          <a href="#faq" className={styles.footerLink}>
+          <a href="/#faq" className={styles.footerLink}>
             FAQ
           </a>
         </div>
         <p className={styles.footerCopy}>
-          © {new Date().getFullYear()} ApplyGenie. Built to help students find scholarships.
+          © {new Date().getFullYear()} Scholarship HQ. Built to help students find scholarships.
         </p>
       </div>
     </footer>

@@ -31,28 +31,116 @@
   font-weight: 700;
 }
 
-/* ─── Filters ─── */
-.filters {
+/* ─── Layout & Sidebar Filters ─── */
+.contentLayout {
   display: flex;
-  gap: var(--space-4);
-  margin-bottom: var(--space-8);
-  flex-wrap: wrap;
+  gap: var(--space-8);
+  align-items: flex-start;
 }
 
-.filterSelect {
-  padding: var(--space-2) var(--space-4);
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  position: sticky;
+  top: calc(var(--nav-height) + var(--space-8));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.sidebarTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--text-heading);
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: var(--space-3);
+}
+
+.mainContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.filterSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.filterSection:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.filterTitle {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.filterHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.filterValue {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--accent-main);
+}
+
+.rangeSlider {
+  width: 100%;
+  accent-color: var(--accent-main);
+  cursor: pointer;
+}
+
+.datePickerWrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dateInput {
+  flex: 1;
+  padding: var(--space-2);
   border: 1.5px solid var(--border-subtle);
   border-radius: var(--radius-md);
   font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--text-body);
   background: var(--bg-surface);
-  cursor: pointer;
   outline: none;
 }
 
-.filterSelect:focus {
+.dateInput:focus {
   border-color: var(--accent-main);
+}
+
+.clearDateBtn {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all var(--duration-fast);
+}
+
+.clearDateBtn:hover {
+  background: var(--bg-base);
+  color: var(--text-body);
 }
 
 /* ─── Grid ─── */
@@ -158,6 +246,13 @@
   border-top: 1px solid var(--border-subtle);
 }
 
+.badges {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .matchBadge {
   display: inline-flex;
   align-items: center;
@@ -176,6 +271,18 @@
 .matchMedium {
   background: var(--brand-gold-glow);
   color: var(--brand-gold);
+}
+
+.reqBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  background: var(--bg-base);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
 }
 
 .applyLink {
@@ -223,6 +330,15 @@
 }
 
 @media (max-width: 768px) {
+  .contentLayout {
+    flex-direction: column;
+  }
+  
+  .sidebar {
+    width: 100%;
+    position: static;
+  }
+
   .grid {
     grid-template-columns: 1fr;
   }

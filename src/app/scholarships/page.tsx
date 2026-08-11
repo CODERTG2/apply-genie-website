@@ -16,6 +16,8 @@ type Scholarship = {
   totalFields: number;
   matchScore: number;
   parsedDeadline?: { display: string; date: Date | null };
+  criteriaCount: number;
+  submissionRequirementsCount: number;
 };
 
 function formatDeadline(deadlineStr: string): { display: string, date: Date | null } {
@@ -40,6 +42,10 @@ export default function ScholarshipsPage() {
   const [sortBy, setSortBy] = useState<"match" | "deadline" | "amount">("match");
   const [total, setTotal] = useState(0);
   const [hasUnansweredReqs, setHasUnansweredReqs] = useState(false);
+  const [minMatchScore, setMinMatchScore] = useState<number>(0);
+  const [deadlineBefore, setDeadlineBefore] = useState<string>("");
+  const [filterSubmissionReqs, setFilterSubmissionReqs] = useState<string>("any");
+  const [minAmount, setMinAmount] = useState<number>(0);
 
   // Load scholarships and saved list
   useEffect(() => {
@@ -89,8 +95,41 @@ export default function ScholarshipsPage() {
     }
   };
 
+  // Filter
+  const filtered = scholarships.filter((s) => {
+    // Match Score
+    if (s.matchScore < minMatchScore) return false;
+
+    // Requirements
+    if (filterSubmissionReqs !== "any") {
+      const count = s.submissionRequirementsCount;
+      if (filterSubmissionReqs === "0" && count !== 0) return false;
+      if (filterSubmissionReqs === "1-2" && (count < 1 || count > 2)) return false;
+      if (filterSubmissionReqs === "3-5" && (count < 3 || count > 5)) return false;
+      if (filterSubmissionReqs === "5+" && count <= 5) return false;
+    }
+
+    // Amount
+    const extractAmount = (str: string) => {
+      const match = str.match(/[\d,]+/);
+      return match ? parseInt(match[0].replace(/,/g, ""), 10) : 0;
+    };
+    if (extractAmount(s.funds) < minAmount) return false;
+
+    // Deadline
+    if (deadlineBefore) {
+      if (!s.parsedDeadline?.date) return false;
+      const selectedDate = new Date(deadlineBefore);
+      // set to end of day
+      selectedDate.setHours(23, 59, 59, 999);
+      if (s.parsedDeadline.date > selectedDate) return false;
+    }
+
+    return true;
+  });
+
   // Sort
-  const sorted = [...scholarships].sort((a, b) => {
+  const sorted = [...filtered].sort((a, b) => {
     if (sortBy === "match") return b.matchScore - a.matchScore;
     if (sortBy === "amount") {
       const extractAmount = (s: string) => {
@@ -183,20 +222,95 @@ export default function ScholarshipsPage() {
           </div>
         ) : (
           <>
-            <div className={styles.filters}>
-              <select
-                className={styles.filterSelect}
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as "match" | "deadline" | "amount")}
-                id="sort-select"
-              >
-                <option value="match">Sort by Match</option>
-                <option value="amount">Sort by Amount</option>
-                <option value="deadline">Sort by Deadline</option>
-              </select>
-            </div>
+            <div className={styles.contentLayout}>
+              <aside className={styles.sidebar}>
+                <h3 className={styles.sidebarTitle}>Filters</h3>
+                
+                <div className={styles.filterSection}>
+                  <div className={styles.filterHeader}>
+                    <h4 className={styles.filterTitle}>Sort By</h4>
+                  </div>
+                  <select
+                    className={styles.dateInput}
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as "match" | "deadline" | "amount")}
+                  >
+                    <option value="match">Match Score</option>
+                    <option value="amount">Award Amount</option>
+                    <option value="deadline">Deadline</option>
+                  </select>
+                </div>
 
-            <div className={styles.grid}>
+                <div className={styles.filterSection}>
+                  <div className={styles.filterHeader}>
+                    <h4 className={styles.filterTitle}>Match Score</h4>
+                    <span className={styles.filterValue}>{minMatchScore}%+</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="100" 
+                    className={styles.rangeSlider} 
+                    value={minMatchScore} 
+                    onChange={(e) => setMinMatchScore(Number(e.target.value))} 
+                  />
+                </div>
+
+                <div className={styles.filterSection}>
+                  <div className={styles.filterHeader}>
+                    <h4 className={styles.filterTitle}>Deadline Before</h4>
+                  </div>
+                  <div className={styles.datePickerWrapper}>
+                    <input 
+                      type="date" 
+                      className={styles.dateInput} 
+                      value={deadlineBefore} 
+                      onChange={(e) => setDeadlineBefore(e.target.value)} 
+                    />
+                    {deadlineBefore && (
+                      <button className={styles.clearDateBtn} onClick={() => setDeadlineBefore("")}>
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className={styles.filterSection}>
+                  <div className={styles.filterHeader}>
+                    <h4 className={styles.filterTitle}>Effort Level</h4>
+                  </div>
+                  <select
+                    className={styles.dateInput}
+                    value={filterSubmissionReqs}
+                    onChange={(e) => setFilterSubmissionReqs(e.target.value)}
+                  >
+                    <option value="any">Any Effort Level</option>
+                    <option value="0">No Essay (0 reqs)</option>
+                    <option value="1-2">Easy to Apply (1-2 reqs)</option>
+                    <option value="3-5">Moderate Work (3-5 reqs)</option>
+                    <option value="5+">A Lot of Work (5+ reqs)</option>
+                  </select>
+                </div>
+
+                <div className={styles.filterSection}>
+                  <div className={styles.filterHeader}>
+                    <h4 className={styles.filterTitle}>Min Award Amount</h4>
+                    <span className={styles.filterValue}>${minAmount.toLocaleString()}+</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="20000" 
+                    step="500"
+                    className={styles.rangeSlider} 
+                    value={minAmount} 
+                    onChange={(e) => setMinAmount(Number(e.target.value))} 
+                  />
+                </div>
+              </aside>
+
+              <main className={styles.mainContent}>
+                <div className={styles.grid}>
               {sorted.map((s) => (
                 <div key={s.title} className={styles.scholarshipCard}>
                   <div className={styles.cardHeader}>
@@ -232,13 +346,18 @@ export default function ScholarshipsPage() {
                   )}
 
                   <div className={styles.cardFooter}>
-                    <span
-                      className={`${styles.matchBadge} ${
-                        s.matchScore >= 80 ? styles.matchHigh : styles.matchMedium
-                      }`}
-                    >
-                      {s.matchScore}% match
-                    </span>
+                    <div className={styles.badges}>
+                      <span
+                        className={`${styles.matchBadge} ${
+                          s.matchScore >= 80 ? styles.matchHigh : styles.matchMedium
+                        }`}
+                      >
+                        {s.matchScore}% match
+                      </span>
+                      <span className={styles.reqBadge}>
+                        {s.submissionRequirementsCount} req{s.submissionRequirementsCount !== 1 ? 's' : ''}
+                      </span>
+                    </div>
                     {s.link && (
                       <a
                         href={s.link}
@@ -252,6 +371,8 @@ export default function ScholarshipsPage() {
                   </div>
                 </div>
               ))}
+                </div>
+              </main>
             </div>
           </>
         )}

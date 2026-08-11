@@ -1,0 +1,102 @@
+.aboutPage {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.hero {
+  position: relative;
+  padding: var(--space-20) var(--space-6) var(--space-12);
+  text-align: center;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.heroGlow {
+  position: absolute;
+  top: -20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+  z-index: -1;
+  pointer-events: none;
+  animation: lampGlow 4s infinite alternate;
+}
+
+.heroContent {
+  max-width: var(--max-width-narrow);
+  margin: 0 auto;
+}
+
+.heroEyebrow {
+  display: inline-block;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--brand-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: var(--space-4);
+}
+
+.heroTitle {
+  font-size: var(--text-5xl);
+  margin-bottom: var(--space-6);
+  color: var(--text-heading);
+}
+
+.heroTitleAccent {
+  color: var(--brand-gold);
+}
+
+.heroSubtitle {
+  font-size: var(--text-lg);
+  color: var(--text-body);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: var(--leading-normal);
+}
+
+.section {
+  padding: var(--space-16) var(--space-6);
+  max-width: var(--max-width-narrow);
+  margin: 0 auto;
+}
+
+.sectionTitle {
+  font-size: var(--text-3xl);
+  margin-bottom: var(--space-6);
+  text-align: center;
+}
+
+.sectionText {
+  font-size: var(--text-base);
+  color: var(--text-body);
+  line-height: var(--leading-normal);
+  margin-bottom: var(--space-4);
+}
+
+.testersList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+}
+
+.testerCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-heading);
+  transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.testerCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--border-strong);
+}

@@ -14,23 +14,31 @@ export async function GET() {
     .where(eq(userRequirementResponses.userId, userId))
     .orderBy(desc(userRequirementResponses.answeredAt));
 
-  // Map requirement descriptions to scholarship titles
   const reqToTitle: Record<string, string> = {};
+  const reqToYesIsEligible: Record<string, boolean> = {};
   
   const dbScholarships = await db.select().from(scholarshipsTable);
   for (const s of dbScholarships as unknown as Scholarship[]) {
     if (!s.specificRequirements || s.specificRequirements.length === 0) continue;
     for (const req of s.specificRequirements) {
-      if (!reqToTitle[req.description]) {
-        reqToTitle[req.description] = s.title;
+      const reqKey = req.question || req.description;
+      if (!reqToTitle[reqKey]) {
+        reqToTitle[reqKey] = s.title;
+        reqToYesIsEligible[reqKey] = req.yes_is_eligible ?? true;
       }
     }
   }
 
-  const responsesWithTitles = responses.map((r) => ({
-    ...r,
-    scholarshipTitle: reqToTitle[r.requirement] || "Unknown Scholarship",
-  }));
+  const responsesWithTitles = responses.map((r) => {
+    const yesIsEligible = reqToYesIsEligible[r.requirement] ?? true;
+    const isYes = r.isMet === yesIsEligible;
+    return {
+      ...r,
+      scholarshipTitle: reqToTitle[r.requirement] || "Unknown Scholarship",
+      isYes,
+      yesIsEligible
+    };
+  });
 
   return Response.json({ responses: responsesWithTitles });
 }

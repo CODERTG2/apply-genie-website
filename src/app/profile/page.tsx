@@ -197,9 +197,10 @@ export default function ProfilePage() {
 
   const toggleRequirement = async (req: any) => {
     const newIsMet = !req.isMet;
+    const newIsYes = !req.isYes;
     // Optimistic update
     setRequirements((prev) => 
-      prev.map(r => r.id === req.id ? { ...r, isMet: newIsMet } : r)
+      prev.map(r => r.id === req.id ? { ...r, isMet: newIsMet, isYes: newIsYes } : r)
     );
     try {
       await fetch("/api/requirements", {
@@ -211,7 +212,7 @@ export default function ProfilePage() {
       console.error("Failed to toggle requirement", error);
       // Revert on error
       setRequirements((prev) => 
-        prev.map(r => r.id === req.id ? { ...r, isMet: req.isMet } : r)
+        prev.map(r => r.id === req.id ? { ...r, isMet: req.isMet, isYes: req.isYes } : r)
       );
     }
   };
@@ -419,10 +420,10 @@ export default function ProfilePage() {
                     className={`${styles.reqToggle} ${req.isMet ? styles.reqToggleMet : styles.reqToggleNotMet}`}
                     onClick={() => toggleRequirement(req)}
                   >
-                    {req.isMet ? (
-                      <><Check size={16} /> Met</>
+                    {req.isYes ? (
+                      <><Check size={16} /> Yes <span style={{fontSize: "0.8em", opacity: 0.8, marginLeft: "4px"}}>({req.isMet ? "Met" : "Not Met"})</span></>
                     ) : (
-                      <><X size={16} /> Not Met</>
+                      <><X size={16} /> No <span style={{fontSize: "0.8em", opacity: 0.8, marginLeft: "4px"}}>({req.isMet ? "Met" : "Not Met"})</span></>
                     )}
                   </button>
                 </div>

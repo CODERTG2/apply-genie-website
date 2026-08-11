@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { userProfiles, userRequirementResponses, scholarships as scholarshipsTable } from "@/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import { matchScholarship, Scholarship, SpecificRequirement } from "@/lib/scholarshipMatching";
 
@@ -37,7 +37,8 @@ export async function GET() {
       const matchScore = Math.round((matchedFields / totalFields) * 100);
       
       for (const req of s.specificRequirements) {
-        if (userResponsesMap[req.description] === undefined) {
+        const reqKey = req.question || req.description;
+        if (userResponsesMap[reqKey] === undefined) {
           reqsWithScore.push({ req, score: matchScore, scholarshipTitle: s.title });
         }
       }
@@ -51,14 +52,33 @@ export async function GET() {
   const uniqueReqs = [];
   const seen = new Set<string>();
   for (const item of reqsWithScore) {
-    if (!seen.has(item.req.description)) {
-      seen.add(item.req.description);
+    const reqKey = item.req.question || item.req.description;
+    if (!seen.has(reqKey)) {
+      seen.add(reqKey);
       uniqueReqs.push({
         ...item.req,
         associatedScholarshipScore: item.score,
         scholarshipTitle: item.scholarshipTitle
       });
     }
+  }
+
+  // Garbage Collection for stale user responses
+  const allActiveReqs = new Set<string>();
+  for (const s of dbScholarships as unknown as Scholarship[]) {
+    if (s.specificRequirements) {
+      for (const req of s.specificRequirements) {
+        allActiveReqs.add(req.question || req.description);
+      }
+    }
+  }
+
+  const staleIds = userResponsesList
+    .filter(resp => !allActiveReqs.has(resp.requirement))
+    .map(resp => resp.id);
+
+  if (staleIds.length > 0) {
+    await db.delete(userRequirementResponses).where(inArray(userRequirementResponses.id, staleIds));
   }
 
   return Response.json({ requirements: uniqueReqs });
