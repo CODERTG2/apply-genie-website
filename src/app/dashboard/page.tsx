@@ -25,21 +25,46 @@ export default function DashboardPage() {
   >([]);
   const [matchCount, setMatchCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  
+  const [showOptInModal, setShowOptInModal] = useState(false);
+  const [savingOptIn, setSavingOptIn] = useState(false);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/profile").then((r) => r.json()),
       fetch("/api/scholarships/save").then((r) => r.json()),
       fetch("/api/scholarships").then((r) => r.json()),
+      fetch("/api/users/preferences").then((r) => r.json()),
     ])
-      .then(([profileData, savedData, matchData]) => {
+      .then(([profileData, savedData, matchData, prefData]) => {
         setProfile(profileData.profile || null);
         setSavedScholarships(savedData.saved || []);
         setMatchCount(matchData.total || 0);
+        
+        if (prefData && prefData.optInForUpdates === null) {
+          setShowOptInModal(true);
+        }
+        
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
+
+  const handleOptIn = async (val: boolean) => {
+    setSavingOptIn(true);
+    try {
+      await fetch("/api/users/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ optInForUpdates: val }),
+      });
+      setShowOptInModal(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSavingOptIn(false);
+    }
+  };
 
   // Calculate profile completion
   const completedFields = profile
@@ -171,6 +196,29 @@ export default function DashboardPage() {
         </div>
       </div>
       <Footer />
+      
+      {showOptInModal && (
+        <EmailOptInModal onSelect={handleOptIn} loading={savingOptIn} />
+      )}
+    </div>
+  );
+}
+
+function EmailOptInModal({ onSelect, loading }: { onSelect: (val: boolean) => void, loading: boolean }) {
+  return (
+    <div className={styles.modalOverlay}>
+      <div className={styles.modalContent}>
+        <h2>Get the latest updates!</h2>
+        <p>Would you like to receive emails about new scholarships and features we add to Apply-Genie?</p>
+        <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-6)' }}>
+          <button className="btn btn--primary" onClick={() => onSelect(true)} disabled={loading}>
+            {loading ? "Saving..." : "Yes, keep me updated"}
+          </button>
+          <button className="btn btn--ghost" onClick={() => onSelect(false)} disabled={loading}>
+            No thanks
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,17 +1,38 @@
 import { db } from "@/db";
 import { users, userProfiles } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { z } from "zod";
 
 // Helper to ensure user exists in DB (for dev without webhooks)
 async function ensureUser(clerkId: string) {
   const existing = await db.select().from(users).where(eq(users.clerkId, clerkId)).get();
-  if (!existing) {
-    await db.insert(users).values({
-      clerkId,
-      email: "pending@sync.dev", // Will be updated by webhook
-    }).onConflictDoNothing();
+  
+  if (!existing || existing.email === "pending@sync.dev") {
+    let email = "pending@sync.dev";
+    let firstName = null;
+    let lastName = null;
+    
+    try {
+      const client = await clerkClient();
+      const clerkUser = await client.users.getUser(clerkId);
+      email = clerkUser.emailAddresses[0]?.emailAddress || email;
+      firstName = clerkUser.firstName;
+      lastName = clerkUser.lastName;
+    } catch (e) {
+      console.error("Failed to fetch user from Clerk", e);
+    }
+
+    if (!existing) {
+      await db.insert(users).values({
+        clerkId,
+        email,
+        firstName,
+        lastName
+      }).onConflictDoNothing();
+    } else if (existing.email === "pending@sync.dev") {
+      await db.update(users).set({ email, firstName, lastName }).where(eq(users.clerkId, clerkId));
+    }
   }
 }
 

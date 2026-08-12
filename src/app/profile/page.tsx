@@ -115,6 +115,9 @@ export default function ProfilePage() {
   const [requirements, setRequirements] = useState<Array<any>>([]);
   const [reqsLoading, setReqsLoading] = useState(true);
 
+  const [optInForUpdates, setOptInForUpdates] = useState<boolean | null>(null);
+  const [savingOptIn, setSavingOptIn] = useState(false);
+
   const [schema, setSchema] = useState<SchemaMap>({});
   const [entityDatabase, setEntityDatabase] = useState<Record<string, string[]>>({});
   const [configLoading, setConfigLoading] = useState(true);
@@ -124,11 +127,13 @@ export default function ProfilePage() {
       fetch("/api/profile").then((res) => res.json()),
       fetch("/api/schema").then((res) => res.json()),
       fetch("/api/entity-db").then((res) => res.json()),
+      fetch("/api/users/preferences").then((res) => res.json()),
     ])
-      .then(([profileData, schemaData, entityData]) => {
+      .then(([profileData, schemaData, entityData, prefData]) => {
         if (profileData.profile) setAnswers(profileData.profile);
         if (schemaData) setSchema(schemaData);
         if (entityData) setEntityDatabase(entityData);
+        if (prefData) setOptInForUpdates(prefData.optInForUpdates);
         setLoading(false);
         setConfigLoading(false);
       })
@@ -217,6 +222,23 @@ export default function ProfilePage() {
     }
   };
 
+  const handleToggleOptIn = async () => {
+    const newVal = !optInForUpdates;
+    setSavingOptIn(true);
+    try {
+      await fetch("/api/users/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ optInForUpdates: newVal }),
+      });
+      setOptInForUpdates(newVal);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSavingOptIn(false);
+    }
+  };
+
   const isFieldVisible = (def: QuestionDef, currentAnswers: Record<string, unknown>) => {
     if (!def.depends_on) return true;
     for (const [depKey, depValues] of Object.entries(def.depends_on)) {
@@ -284,6 +306,13 @@ export default function ProfilePage() {
               style={{ marginTop: "var(--space-4)", paddingTop: "var(--space-4)", borderTop: "1px solid var(--border-subtle)" }}
             >
               Specific Requirements
+            </a>
+            <a 
+              href="#preferences"
+              className={styles.sidebarLink}
+              onClick={(e) => scrollToSection(e, "preferences")}
+            >
+              Email Preferences
             </a>
           </motion.nav>
 
@@ -430,6 +459,35 @@ export default function ProfilePage() {
               ))}
             </div>
             )}
+          </motion.div>
+
+          {/* Email Preferences Section */}
+          <motion.div 
+            id="preferences"
+            className={styles.section}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 * (SECTIONS.length + 1) }}
+            style={{ marginTop: "var(--space-8)" }}
+          >
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>Email Preferences</h2>
+            </div>
+            <div className={styles.fieldGrid}>
+              <div className={styles.fieldRow} style={{ alignItems: 'center' }}>
+                <span className={styles.fieldLabel}>Opt-in to feature updates and newsletters</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+                  <button 
+                    className={`btn ${optInForUpdates ? 'btn--primary' : 'btn--ghost'}`}
+                    onClick={handleToggleOptIn}
+                    disabled={savingOptIn}
+                  >
+                    {optInForUpdates ? "Subscribed" : "Unsubscribed"}
+                  </button>
+                  {savingOptIn && <Loader2 size={16} className="spin" />}
+                </div>
+              </div>
+            </div>
           </motion.div>
         </div>
         </div>

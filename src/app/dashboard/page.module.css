@@ -178,3 +178,41 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ─── Modal ─── */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modalContent {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  max-width: 450px;
+  width: 90%;
+  box-shadow: var(--shadow-xl);
+}
+
+.modalContent h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  color: var(--text-heading);
+  margin-bottom: var(--space-3);
+}
+
+.modalContent p {
+  font-size: var(--text-base);
+  color: var(--text-body);
+  line-height: 1.5;
+}

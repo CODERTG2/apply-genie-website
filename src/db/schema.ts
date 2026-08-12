@@ -71,6 +71,7 @@ export const users = sqliteTable('users', {
   email: encryptedText('email').notNull(),
   firstName: encryptedText('first_name'),
   lastName: encryptedText('last_name'),
+  optInForUpdates: integer('opt_in_for_updates', { mode: 'boolean' }),
   createdAt: text('created_at').default(sql`(datetime('now'))`).notNull(),
   updatedAt: text('updated_at').default(sql`(datetime('now'))`).notNull(),
 });
