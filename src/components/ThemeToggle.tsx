@@ -1,41 +1,29 @@
 "use client";
 
-import * as React from "react";
+import { useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import styles from "./ThemeToggle.module.css";
 
+const subscribe = () => () => {};
+const getSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export function ThemeToggle() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-
-  // Avoid hydration mismatch by waiting for mount
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <button className={styles.toggle} aria-label="Toggle theme" type="button">
-        <div className={styles.icon} />
-      </button>
-    );
-  }
-
-  const isDark = (theme === "system" ? resolvedTheme : theme) === "dark";
+  const { setTheme, resolvedTheme } = useTheme();
+  // A stable server snapshot keeps the initial markup hydration-safe.
+  const mounted = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const isDark = resolvedTheme === "dark";
 
   return (
     <button
       className={styles.toggle}
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      aria-label="Toggle theme"
+      disabled={!mounted}
+      aria-label={mounted ? (isDark ? "Switch to light mode" : "Switch to dark mode") : "Toggle theme"}
       type="button"
     >
-      {isDark ? (
-        <Sun className={styles.icon} />
-      ) : (
-        <Moon className={styles.icon} />
-      )}
+      {!mounted ? <span className={styles.icon} /> : isDark ? <Sun className={styles.icon} aria-hidden="true" /> : <Moon className={styles.icon} aria-hidden="true" />}
     </button>
   );
 }

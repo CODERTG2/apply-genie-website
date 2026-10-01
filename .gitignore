@@ -57,4 +57,5 @@ GEMINI.md
 attribute_schema.json
 current_scholarships.json
 entity_db.json
+.tmp/
 *.csv

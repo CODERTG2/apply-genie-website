@@ -171,7 +171,7 @@ async function main() {
 
     try {
       const { data, error } = await resend.emails.send({
-        from: "Apply-Genie Updates <updates@scholarshiphq.online>",
+        from: "ScholarshipHQ Updates <updates@scholarshiphq.online>",
         to: [user.email],
         subject: "Testing our new email system!",
         html: getEmailHtml(name),

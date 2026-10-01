@@ -21,6 +21,12 @@ export default function Footer() {
           <a href="/#faq" className={styles.footerLink}>
             FAQ
           </a>
+          <Link href="/privacy" className={styles.footerLink}>
+            Privacy
+          </Link>
+          <Link href="/terms" className={styles.footerLink}>
+            Terms
+          </Link>
           <a href="https://forms.gle/4mE5bVKiRBvF2Z8p7" target="_blank" rel="noopener noreferrer" className={styles.footerLink}>
             Report an issue
           </a>

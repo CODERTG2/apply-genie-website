@@ -15,13 +15,13 @@
 :root {
   /* --- Semantic Colors: Light Theme (Default) --- */
   --bg-base: #F7F5F0;
-  --bg-surface: #FFFFFF;
+  --bg-surface: #FEFDFC;
   --bg-surface-hover: #F1F5F9;
   --bg-glass: rgba(255, 255, 255, 0.8);
   
   --text-heading: #0F1B2D;
   --text-body: #1E293B;
-  --text-muted: #64748B;
+  --text-muted: #566477;
   --text-on-accent: #FFFFFF;
   --text-on-gold: #0F1B2D;
 
@@ -32,6 +32,7 @@
   --accent-hover: #1D4FD7;
   --accent-glow: rgba(37, 99, 235, 0.15);
 
+  --brand-gold-text: #916014;
   --brand-gold: #E8A838;
   --brand-gold-hover: #D4952E;
   --brand-gold-glow: rgba(232, 168, 56, 0.25);
@@ -106,7 +107,7 @@
   
   --text-heading: #F7F5F0; /* Warm cream to match light mode bg, adds elegance */
   --text-body: #A5B6C9; /* Soft, readable grey-blue */
-  --text-muted: #6B7C93;
+  --text-muted: #9AAABE;
   --text-on-accent: #FFFFFF;
   --text-on-gold: #0A0F17;
 
@@ -117,6 +118,7 @@
   --accent-hover: #77A4FF;
   --accent-glow: rgba(82, 139, 255, 0.2);
 
+  --brand-gold-text: #E8B75F;
   --brand-gold: #E8A838; /* Keeping the same brand gold */
   --brand-gold-hover: #F2BA5A;
   --brand-gold-glow: rgba(232, 168, 56, 0.15);
@@ -133,6 +135,7 @@
 html {
   font-size: 16px;
   scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--nav-height) + 24px);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -199,7 +202,9 @@ a:hover {
   font-size: var(--text-sm);
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--duration-normal) var(--ease-out);
+  transition: background-color var(--duration-normal) var(--ease-out), color var(--duration-normal) var(--ease-out), transform var(--duration-normal) var(--ease-out);
+  min-height: 44px;
+  white-space: nowrap;
   text-decoration: none;
   line-height: 1;
 }
@@ -207,12 +212,13 @@ a:hover {
 .btn--primary {
   background: var(--brand-gold);
   color: var(--text-on-gold);
-  box-shadow: var(--shadow-gold);
+  box-shadow: none;
 }
 .btn--primary:hover {
   background: var(--brand-gold-hover);
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px var(--brand-gold-glow);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-on-gold);
 }
 
 .btn--secondary {
@@ -238,7 +244,7 @@ a:hover {
 .btn--large {
   padding: var(--space-4) var(--space-8);
   font-size: var(--text-base);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
 }
 
 .btn--icon {
@@ -329,6 +335,7 @@ a:hover {
 
 /* --- Reduced Motion --- */
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   *,
   *::before,
   *::after {
@@ -364,3 +371,6 @@ a:hover {
   background: var(--brand-gold-glow);
   color: inherit;
 }
+
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { cursor: not-allowed; opacity: 0.6; }
