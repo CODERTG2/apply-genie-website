@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, DM_Serif_Display } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -35,6 +36,7 @@ export default function RootLayout({
           <ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem>
             {children}
           </ThemeProvider>
+          <Analytics />
         </body>
       </html>
     </ClerkProvider>
